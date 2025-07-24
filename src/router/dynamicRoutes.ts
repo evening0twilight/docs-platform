@@ -1,11 +1,11 @@
 // 动态路由配置
 import type { RouteRecordRaw } from 'vue-router'
 import type { Router } from 'vue-router'
-import { getDocumentList } from '@/api/document'
+import { getDocumentTree } from '@/api/document'
 
 export const setupDynamicRoutes = async (router: Router) => {
   try {
-    const documents = await getDocumentList()
+    const documents = await getDocumentTree()
     const routes = generateRoutesFromDocuments(documents)
     
     routes.forEach(route => {
