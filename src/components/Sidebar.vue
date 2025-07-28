@@ -13,7 +13,7 @@
       </div>
       <!-- 用户头像 -->
       <div class="flex items-center justify-center">
-        <a-popover position="bl" trigger="hover"
+        <a-popover position="bl" trigger="click"
           :content-style="{ padding: '0', background: 'transparent', boxShadow: 'none', border: 'none' }">
           <a-space size="large">
             <a-avatar :imageUrl="userInfo.avatar || unImgUrl" :style="{ cursor: 'pointer' }" />
@@ -53,8 +53,8 @@
         历史记录
       </div>
     </div>
+    <HistoryDiolog ref="historyDialog" />
   </div>
-  <HistoryDiolog ref="historyDialog" />
 </template>
 
 <script setup lang="ts">
