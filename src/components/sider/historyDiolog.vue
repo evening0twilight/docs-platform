@@ -1,7 +1,6 @@
 <template>
-  <div class="historyContainer w-full h-full">
+  <teleport to="body">
     <a-modal v-model:visible="visible" :width="800" :closable="false" title="历史版本">
-
       <a-radio-group class="flex flex-col gap-4 w-full h-[400px] overflow-y-auto" direction="vertical"
         v-model="selectedValue">
         <a-radio v-for="item in modelDats" :key="item.id" :value="item.id"
@@ -23,7 +22,7 @@
         </div>
       </template>
     </a-modal>
-  </div>
+  </teleport>
 </template>
 
 <script setup lang="ts">

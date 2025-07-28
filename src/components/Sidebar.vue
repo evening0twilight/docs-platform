@@ -13,7 +13,7 @@
       </div>
       <!-- 用户头像 -->
       <div class="flex items-center justify-center">
-        <a-popover position="bl" trigger="click"
+        <a-popover position="bl" trigger="hover"
           :content-style="{ padding: '0', background: 'transparent', boxShadow: 'none', border: 'none' }">
           <a-space size="large">
             <a-avatar :imageUrl="userInfo.avatar || unImgUrl" :style="{ cursor: 'pointer' }" />
@@ -21,7 +21,7 @@
 
           <!-- 用户信息弹窗 -->
           <template #content>
-            <UserDiolog :userInfo="userInfo" />
+            <UserDiolog :userInfo="userInfo" @open-setting-dialog="openUserSettingDialog" />
           </template>
         </a-popover>
       </div>
@@ -32,13 +32,13 @@
         <a-input placeholder="搜索" allowClear></a-input>
       </div>
       <div class="flex items-center justify-center">
-        <a-popover position="bl" trigger="hover" :content-style="{ padding: '0' }">
+        <a-popover ref="addPopover" position="bl" trigger="click" :content-style="{ padding: '0' }">
           <a-space size="small">
             <a-avatar :imageUrl="addSvg" :size="30" :style="{ cursor: 'pointer' }" shape="square" />
           </a-space>
           <!-- 用户信息弹窗 -->
           <template #content>
-            <AddDiolog />
+            <AddDiolog @selectOne="selectOne" />
           </template>
         </a-popover>
       </div>
@@ -54,6 +54,8 @@
       </div>
     </div>
     <HistoryDiolog ref="historyDialog" />
+    <SettingInfo ref="settingInfo" />
+    <AddDocs ref="addDocs" :title="title" :selected="selected" />
   </div>
 </template>
 
@@ -67,10 +69,14 @@ import AddDiolog from './sider/add.vue';
 import HistoryDiolog from './sider/historyDiolog.vue';
 import type { UserInfo } from './type';
 import addSvg from '@/assets/add.svg';
+import SettingInfo from './sider/diolog/settingInfo.vue'
+import AddDocs from './sider/diolog/addDocs.vue';
 
 interface State {
   imgUrl: string | undefined;
   userInfo: UserInfo; // 将userInfo添加到响应式state中
+  title: string; // 确认是添加文档还是文件夹
+  selected: string; // 表示选择的是文档还是文件夹
 }
 
 // 没有头像的默认图片
@@ -86,17 +92,51 @@ const state = reactive<State>({
     power: 1,
     avatar: undefined
   },
+  title: '文档',
+  selected: '文档'
 });
 
 const {
   imgUrl,
   userInfo,
+  title,
+  selected,
 } = toRefs(state);
 
 const historyDialog = ref<InstanceType<typeof HistoryDiolog>>();
+const settingInfo = ref<InstanceType<typeof SettingInfo>>();
+const addDocs = ref<InstanceType<typeof AddDocs>>();
+const addPopover = ref();
 
+// 历史记录弹窗
 const changeDiolog = () => {
-  historyDialog.value.openDiolog();
+  historyDialog.value?.openDiolog();
+};
+
+// 个人信息弹窗
+const openUserSettingDialog = () => {
+  settingInfo.value?.openDialog();
+  console.log('打开个人信息2');
+};
+
+const openAddDocsDialog = () => {
+  addDocs.value?.openDialog();
+};
+
+const selectOne = (item: any) => {
+  console.log('选中的项:', item);
+  
+  // 更新状态
+  title.value = item.title || item.name;
+  selected.value = item.selected || '文档';
+  
+  // 关闭 Popover
+  addPopover.value?.hide?.();
+  
+  // 稍微延迟打开弹窗，确保 Popover 完全关闭
+  setTimeout(() => {
+    openAddDocsDialog();
+  }, 100);
 };
 
 onMounted(() => {
