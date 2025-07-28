@@ -1,15 +1,20 @@
 <template>
   <div class="historyContainer w-full h-full">
     <a-modal v-model:visible="visible" :width="800" :closable="false" title="历史版本">
-      <div class="flex flex-col gap-4 h-[400px] overflow-y-auto">
-        <div v-for="item in modelDats" :key="item.id"
-          class="flex gap-[10px] items-center p-2 border border-solid border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100">
-          <div>{{ item.name }}</div>
-          <div>{{ item.createTime }}</div>
-          <div>{{ item.createor }}</div>
-          <div>{{ item.updateTime }}</div>
-        </div>
-      </div>
+
+      <a-radio-group class="flex flex-col gap-4 w-full h-[400px] overflow-y-auto" direction="vertical"
+        v-model="selectedValue">
+        <a-radio v-for="item in modelDats" :key="item.id" :value="item.id"
+          class="w-full flex gap-[10px] items-center p-2 border border-solid border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100">
+          <div class="flex gap-[10px] items-center w-full">
+            <div>{{ item.name }}</div>
+            <div>{{ item.createTime }}</div>
+            <div>{{ item.createor }}</div>
+            <div>{{ item.updateTime }}</div>
+          </div>
+        </a-radio>
+      </a-radio-group>
+
       <!-- 添加底部按钮 -->
       <template #footer>
         <div class="flex justify-end">
@@ -25,19 +30,27 @@
 /**
 * @description 
 */
-import { ref, onMounted, reactive, toRefs } from 'vue';
+import { ref, onMounted, reactive, toRefs, watch } from 'vue';
 
 interface State {
   visible: boolean
+  selectedValue: string;
 }
 
 const state = reactive<State>({
-  visible: false
+  visible: false,
+  selectedValue: ''
 });
 
 const {
   visible,
+  selectedValue
 } = toRefs(state);
+
+watch(() => selectedValue.value, (newVal) => {
+  console.log(selectedValue.value);
+  console.log(`选中的值: ${newVal}`);
+});
 
 const openDiolog = () => {
   visible.value = true;

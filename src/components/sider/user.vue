@@ -20,7 +20,7 @@
         <div>
           <a-avatar :imageUrl=PersonSvg :size="20" />
         </div>
-        <div class="flex justify-center items-center">
+        <div class="flex justify-center items-center cursor-pointer" @click="openUserInfoDialog">
           个人信息
         </div>
       </div>
@@ -34,6 +34,9 @@
       </div>
     </div>
   </div>
+  <div class="">
+    <SettingInfo ref="settingInfo" />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -41,11 +44,19 @@ import { ref } from 'vue';
 import type { UserInfo } from '../type';
 import PersonSvg from '@/assets/personInformation.svg';
 import LogoutSvg from '@/assets/logout.svg';
+import SettingInfo from './diolog/settingInfo.vue'
 
 // 接收完整的userInfo对象
 defineProps<{
   userInfo: UserInfo;
 }>();
+
+const settingInfo = ref<InstanceType<typeof SettingInfo>>();
+
+const openUserInfoDialog = () => {
+  settingInfo.value.openDialog();
+  console.log('打开个人信息');
+};
 </script>
 
 <style scoped>
