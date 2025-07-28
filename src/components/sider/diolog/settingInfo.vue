@@ -1,7 +1,8 @@
 <template>
-  <div class="">
-    <a-modal v-model:visible="visible" :width="800" title="个人信息">
-      <div class="w-full h-full flex flex-col gap-[20px]">
+  <teleport to="body">
+    <a-modal v-model:visible="visible" :width="800" title="个人信息" :mask-closable="false" :esc-to-close="false"
+      @cancel="closeDialog">
+      <div class="w-full h-full flex flex-col gap-[20px]" @click.stop>
         <div>
           <a-input placeholder="请输入用户名" v-model="username"></a-input>
         </div>
@@ -9,8 +10,16 @@
           <a-input placeholder="请输入邮箱" v-model="email"></a-input>
         </div>
       </div>
+
+      <!-- 添加底部按钮 -->
+      <template #footer>
+        <div class="flex justify-end gap-2">
+          <a-button @click="closeDialog" type="outline">取消</a-button>
+          <a-button @click="saveUserInfo" type="primary">保存</a-button>
+        </div>
+      </template>
     </a-modal>
-  </div>
+  </teleport>
 </template>
 
 <script setup lang="ts">
@@ -69,10 +78,16 @@ const openDialog = () => {
   // fetchUserInfo();
 };
 
+// 关闭对话框
+const closeDialog = () => {
+  visible.value = false;
+};
+
 // 导出方法供外部调用
 defineExpose({
   visible,
-  openDialog
+  openDialog,
+  closeDialog
 });
 
 </script>
