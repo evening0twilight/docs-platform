@@ -36,7 +36,7 @@
           <a-space size="small">
             <a-avatar :imageUrl="addSvg" :size="30" :style="{ cursor: 'pointer' }" shape="square" />
           </a-space>
-          <!-- 用户信息弹窗 -->
+          <!-- 添加弹窗 -->
           <template #content>
             <AddDiolog @selectOne="selectOne" />
           </template>
@@ -125,18 +125,10 @@ const openAddDocsDialog = () => {
 
 const selectOne = (item: any) => {
   console.log('选中的项:', item);
-
   // 更新状态
   title.value = item.title || item.name;
   selected.value = item.selected || '文档';
-
-  // 关闭 Popover
-  addPopover.value?.hide?.();
-
-  // 稍微延迟打开弹窗，确保 Popover 完全关闭
-  setTimeout(() => {
-    openAddDocsDialog();
-  }, 100);
+  openAddDocsDialog();
 };
 
 onMounted(() => {
