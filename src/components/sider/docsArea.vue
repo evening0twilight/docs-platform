@@ -13,25 +13,33 @@
 * @description 
 */
 import { ref, onMounted, reactive, toRefs, computed, watch } from 'vue';
+import { getDocumentTree, searchDocuments, loadChildNodes } from '@/api/docs'
 
 
 interface State {
   searchValue: string
   expandedKeys: string[]
+  selectedKeys: string[]
 }
 
 const state = reactive<State>({
   searchValue: '',
   expandedKeys: [],
+  selectedKeys: [],
 });
 
 const {
   searchValue,
   expandedKeys,
+  selectedKeys,
 } = toRefs(state);
 
 const handleSearch = (value: string) => {
   console.log(value);
+};
+
+const handleExpand = (keys: string[]) => {
+  console.log('展开的节点：', keys);
 };
 
 // 初始假数据
@@ -49,7 +57,7 @@ const virtuallistProps = {
 
 const loadMore = async (node) => {
   try {
-    const children = await fetchChildren(node.key);
+    const children = await loadChildNodes(node.key);
     node.children = children;
     return children;
   }
@@ -61,11 +69,11 @@ const loadMore = async (node) => {
 }
 
 // 搜索过滤后的树数据
-const filteredTreeData = computed(() => {
+const treeData = computed(() => {
   if (!searchValue.value) {
     return rawData.value;
   }
-  return filteredTreeData(rawData.value, searchValue.value);
+  return filterTree(rawData.value, searchValue.value);
 })
 
 // 树节点过滤算法
