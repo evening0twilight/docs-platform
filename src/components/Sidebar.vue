@@ -45,6 +45,8 @@
     </div>
     <!-- 文档 -->
     <div class="flex-1 overflow-auto">
+      <DocsArea />
+
     </div>
     <!-- 历史记录 -->
     <div class="w-full h-[50px] flex justify-center items-center px-[10px] py-[1px] flex-shrink-0">
@@ -71,6 +73,7 @@ import type { UserInfo } from './type';
 import addSvg from '@/assets/add.svg';
 import SettingInfo from './sider/diolog/settingInfo.vue'
 import AddDocs from './sider/diolog/addDocs.vue';
+import DocsArea from './sider/docsArea.vue'
 
 interface State {
   imgUrl: string | undefined;

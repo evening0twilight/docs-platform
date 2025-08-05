@@ -14,7 +14,9 @@
             <a-breadcrumb-item>List</a-breadcrumb-item>
             <a-breadcrumb-item>App</a-breadcrumb-item>
           </a-breadcrumb>
-          <a-layout-content>Content</a-layout-content>
+          <a-layout-content>
+            <EditorArea />
+          </a-layout-content>
           <a-layout-footer>Footer</a-layout-footer>
         </a-layout>
       </a-layout>
@@ -25,6 +27,7 @@
 <script setup lang="ts">
 import { Message } from '@arco-design/web-vue';
 import Sidebar from './Sidebar.vue';
+import EditorArea from './EditorArea.vue'
 
 </script>
 
