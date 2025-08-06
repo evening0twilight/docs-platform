@@ -1,7 +1,7 @@
 <template>
   <div class="editorContainer w-full h-full flex">
     <ToolList :editor="editor" />
-    <editor-content :editor="editor" class="w-full h-full" />
+    <editor-content :editor="editor" class="w-full h-full text-black"  />
   </div>
 </template>
 

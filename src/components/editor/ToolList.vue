@@ -1,14 +1,27 @@
 <template>
   <div class="toolContainer ">
     <!-- h1 -->
-    <div 
+    <!-- 后期我希望是加一个框，里面包含h1-h5全部可以修改 -->
+    <div
       :class="{ 'is-active': editor?.isActive('heading', { level: 1 }) }" 
       @click="editor?.chain().focus().toggleHeading({ level: 1 }).run()" 
     >
       <img :src="h1" />
     </div>
-    <div></div>
-    <div></div>
+    <!-- 无序列表 -->
+    <div
+      :class="{ 'is-active': editor?.isActive('bulletList') }" 
+      @click="editor?.chain().focus().toggleBulletList().run()"
+    >
+      <img :src="unOrderly" alt="无序列表">
+    </div>
+    <!-- 有序列表 -->
+    <div
+      :class="{ 'is-active': editor?.isActive('orderedList') }"
+      @click="editor?.chain().focus().toggleOrderedList().run()"
+    >
+      <img :src="orderly" alt="有序列表">
+    </div>
     <div></div>
     <div></div>
   </div>
@@ -20,7 +33,9 @@
 */
 import { ref, onMounted, reactive, toRefs } from 'vue';
 import type { Editor } from '@tiptap/vue-3';
-import h1  from '@/assets/editorIcon/h1.svg'
+import h1 from '@/assets/editorIcon/h1.svg'
+import unOrderly from '@/assets/editorIcon/unOrderly.svg'
+import orderly from '@/assets/editorIcon/orderly.svg'
 
 interface Props {
   editor: Editor | undefined
