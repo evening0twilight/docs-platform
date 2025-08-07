@@ -1,20 +1,20 @@
 <template>
-  <div class="layoutContainer w-full h-full p-[20px] rounded-xl">
+  <div class="layoutContainer w-full h-full p-[20px] rounded-xl overflow-hidden">
     <a-layout class="layout-demo">
-      <a-layout-sider collapsible breakpoint="xl" hide-trigger :width="300">
+      <a-layout-sider collapsible breakpoint="xl" hide-trigger :width="300" class="h-full">
         <Sidebar class="w-full h-full " />
       </a-layout-sider>
-      <a-layout>
-        <a-layout-header style="padding-left: 20px">
+      <a-layout class="w-full h-full">
+        <a-layout-header style="padding-left: 20px" class="h-[64px] w-full">
           Header
         </a-layout-header>
-        <a-layout style="padding: 0 24px">
+        <a-layout style="padding: 0 24px" class="h-full w-full">
           <a-breadcrumb :style="{ margin: '16px 0' }">
             <a-breadcrumb-item>Home</a-breadcrumb-item>
             <a-breadcrumb-item>List</a-breadcrumb-item>
             <a-breadcrumb-item>App</a-breadcrumb-item>
           </a-breadcrumb>
-          <a-layout-content>
+          <a-layout-content class="w-full h-full">
             <EditorArea />
           </a-layout-content>
           <a-layout-footer>Footer</a-layout-footer>
@@ -33,6 +33,7 @@ import EditorArea from './EditorArea.vue'
 
 <style scoped>
 .layout-demo {
+  width: 100%;
   height: 100%;
   background: var(--color-fill-2);
   border: 1px solid var(--color-border);

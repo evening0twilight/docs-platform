@@ -1,7 +1,7 @@
 <template>
-  <div class="editorContainer w-full h-full flex">
+  <div class="editorContainer w-full h-full flex flex-col overflow-hidden">
     <ToolList :editor="editor" />
-    <editor-content :editor="editor" class="w-full h-full text-black"  />
+    <editor-content :editor="editor" class="w-full h-full text-black" />
   </div>
 </template>
 
@@ -11,8 +11,11 @@
 */
 import { ref, onMounted, reactive, toRefs, onBeforeUnmount } from 'vue';
 import { useEditor, EditorContent } from '@tiptap/vue-3'
+import Highlight from '@tiptap/extension-highlight'
+import Superscript from '@tiptap/extension-superscript'
+import Subscript from '@tiptap/extension-subscript'
 import StarterKit from '@tiptap/starter-kit'
-import ToolList  from './editor/ToolList.vue';
+import ToolList from './editor/ToolList.vue';
 
 interface State {
   // editor: any
@@ -27,8 +30,14 @@ const {
 } = toRefs(state);
 
 const editor = useEditor({
-  content: "<p>I'm running Tiptap with Vue.js. 🎉</p>",
-  extensions: [StarterKit],
+  // content: null,
+  extensions: [
+    StarterKit,
+    Highlight,
+    Subscript
+  ],
+  editable: true, // 该用户是否可编辑
+  injectCSS: false, // 是否注入默认的 CSS 样式
 })
 
 </script>
@@ -37,10 +46,26 @@ const editor = useEditor({
 .editorContainer {
   width: 100%;
   height: 100%;
-  border: 2px solid #dcdfe6;
+  /* border: 2px solid #dcdfe6; */
   display: flex;
   flex-direction: column;
   position: relative;
   overflow: hidden;
-  /* 防止外层出现滚动 */
-}</style>
+}
+
+.editorContainer :deep(.ProseMirror) {
+  width: 100%;
+  height: calc(100vh - 260px);
+  border: 1px black solid;
+  border-radius: 10px;
+  display: block;
+  box-sizing: border-box;
+  overflow-y: hidden;
+  align-items: flex-start !important;
+  justify-content: flex-start !important;
+  text-align: left !important;
+  margin: 0 !important;
+  padding: 10px 5px 10px 5px !important;
+  overflow: auto;
+}
+</style>
