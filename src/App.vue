@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
-import MainLayout from './components/MainLayout.vue';
+// 移除不需要的导入，现在使用路由系统
 </script>
 
 <template>
-  <MainLayout />
+  <router-view />
 </template>
 
 <style scoped></style>

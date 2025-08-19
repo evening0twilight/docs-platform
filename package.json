@@ -25,6 +25,7 @@
     "pinia-plugin-persistedstate": "^4.4.1",
     "tailwindcss": "^4.1.11",
     "vue": "^3.5.17",
+    "vue-router": "4",
     "y-websocket": "^3.0.0",
     "yjs": "^13.6.27"
   },
