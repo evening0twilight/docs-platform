@@ -15,7 +15,7 @@
             <a-breadcrumb-item>App</a-breadcrumb-item>
           </a-breadcrumb>
           <a-layout-content class="w-full h-full">
-            <EditorArea />
+            <router-view />
           </a-layout-content>
           <a-layout-footer>Footer</a-layout-footer>
         </a-layout>
@@ -26,8 +26,17 @@
 
 <script setup lang="ts">
 import { Message } from '@arco-design/web-vue';
+import { useRouter } from 'vue-router'
 import Sidebar from './Sidebar.vue';
-import EditorArea from './EditorArea.vue'
+
+const router = useRouter()
+
+const handleLogout = () => {
+  localStorage.removeItem('token')
+  sessionStorage.removeItem('token')
+  Message.success('已退出登录')
+  router.push('/login')
+}
 
 </script>
 
