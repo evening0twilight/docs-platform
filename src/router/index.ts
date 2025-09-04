@@ -37,7 +37,7 @@ const routes: RouteRecordRaw[] = [
       }
     ]
   },
-  // 登录页面（如果需要的话）
+  // 登录页面
   {
     path: '/login',
     name: 'Login',
