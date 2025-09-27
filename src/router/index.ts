@@ -1,6 +1,8 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
 
+import Login from '@/views/login/index.vue'
+
 // 路由配置
 const routes: RouteRecordRaw[] = [
   {
@@ -41,7 +43,7 @@ const routes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'Login',
-    component: () => import('@/views/login.vue'),
+    component: Login,
     meta: {
       title: '登录',
       hideInMenu: true
