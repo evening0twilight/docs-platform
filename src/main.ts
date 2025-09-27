@@ -6,8 +6,6 @@ import { createPersistedState } from 'pinia-plugin-persistedstate'
 import router from './router'
 // 引入arco
 import ArcoVue from '@arco-design/web-vue'
-// 模拟数据
-import { initMockData } from './mock/user';
 import '@arco-design/web-vue/dist/arco.css'
 import './style.css'
 import App from './App.vue'
