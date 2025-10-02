@@ -24,14 +24,31 @@
       <div class="glass-shine"></div>
       <div class="glass-content">
         <h2 class="login-title">欢迎登录</h2>
-        <form class="login-form">
+        <form class="login-form" @submit.prevent="handleLogin">
           <div class="form-group">
-            <input type="text" placeholder="用户名" class="glass-input">
+            <input 
+              type="text" 
+              placeholder="用户名" 
+              class="glass-input"
+              v-model="loginForm.username"
+              required
+            >
           </div>
           <div class="form-group">
-            <input type="password" placeholder="密码" class="glass-input">
+            <input 
+              type="password" 
+              placeholder="密码" 
+              class="glass-input"
+              v-model="loginForm.password"
+              required
+            >
           </div>
-          <button type="submit" class="glass-button">登录</button>
+          <button type="submit" class="glass-button" :disabled="loading">
+            {{ loading ? '登录中...' : '登录' }}
+          </button>
+          <div v-if="errorMessage" class="error-message">
+            {{ errorMessage }}
+          </div>
         </form>
       </div>
     </div>
@@ -39,29 +56,64 @@
 </template>
 
 <script setup lang="ts">
-/**
-* @description 
-*/
-import { ref, onMounted, reactive, toRefs } from 'vue';
+import { ref, reactive } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/store/user'
+import { Message } from '@arco-design/web-vue'
 
-// interface State {
-//   : any
-// }
+// 路由实例
+const router = useRouter()
+// 用户store
+const userStore = useUserStore()
 
-// const state = reactive<State>({
-//   : null
-// });
+// 登录表单数据
+const loginForm = reactive({
+  username: '',
+  password: ''
+})
 
-// const {
+// 状态管理
+const loading = ref(false)
+const errorMessage = ref('')
 
-// } = toRefs(state);
+// 登录处理函数
+const handleLogin = async () => {
+  if (!loginForm.username || !loginForm.password) {
+    errorMessage.value = '请输入用户名和密码'
+    return
+  }
 
+  try {
+    loading.value = true
+    errorMessage.value = ''
+
+    const result = await userStore.login({
+      username: loginForm.username,
+      password: loginForm.password
+    })
+
+    if (result.success) {
+      Message.success('登录成功')
+      // 跳转到工作台
+      router.push('/workspace')
+    } else {
+      errorMessage.value = '登录失败，请检查用户名和密码'
+    }
+  } catch (error) {
+    console.error('登录错误:', error)
+    errorMessage.value = '登录失败，请稍后重试'
+  } finally {
+    loading.value = false
+  }
+}
+
+// 3D倾斜效果
 const tiltCard = ref(null)
 
-const handleMouseMove = (e) => {
+const handleMouseMove = (e: MouseEvent) => {
   if (!tiltCard.value) return
 
-  const rect = tiltCard.value.getBoundingClientRect()
+  const rect = (tiltCard.value as HTMLElement).getBoundingClientRect()
   const x = e.clientX - rect.left
   const y = e.clientY - rect.top
   const centerX = rect.width / 2
@@ -70,16 +122,15 @@ const handleMouseMove = (e) => {
   const maxTilt = 18
   const rotateY = ((x - centerX) / centerX) * maxTilt
   const rotateX = -((y - centerY) / centerY) * maxTilt
-  tiltCard.value.style.transform = `perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.03)`
+  ;(tiltCard.value as HTMLElement).style.transform = `perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.03)`
 }
 
 const handleMouseLeave = () => {
   if (!tiltCard.value) return
-
-  tiltCard.value.style.transform = 'perspective(600px) rotateX(0deg) rotateY(0deg) scale(1)'
+  ;(tiltCard.value as HTMLElement).style.transform = 'perspective(600px) rotateX(0deg) rotateY(0deg) scale(1)'
 }
-
 </script>
+
 <style lang="scss" scoped>
 .login-container {
   min-height: 100vh;
@@ -191,6 +242,39 @@ const handleMouseLeave = () => {
   color: #fff;
   font-size: 1rem;
   font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+  position: relative;
+  overflow: hidden;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  }
+
+  &:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+.error-message {
+  margin-top: 1rem;
+  padding: 8px 12px;
+  background: rgba(220, 53, 69, 0.2);
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  border-radius: 8px;
+  color: #ff6b6b;
+  font-size: 0.875rem;
+  text-align: center;
+  backdrop-filter: blur(5px);
+
   cursor: pointer;
   transition: all 0.3s ease;
   backdrop-filter: blur(5px);

@@ -45,8 +45,7 @@
     </div>
     <!-- 文档 -->
     <div class="flex-1 overflow-auto">
-      <DocsArea />
-
+      <DocsArea @document-click="handleDocumentClick" />
     </div>
     <!-- 历史记录 -->
     <div class="w-full h-[50px] flex justify-center items-center px-[10px] py-[1px] flex-shrink-0">
@@ -74,6 +73,11 @@ import addSvg from '@/assets/add.svg';
 import SettingInfo from './sider/diolog/settingInfo.vue'
 import AddDocs from './sider/diolog/addDocs.vue';
 import DocsArea from './sider/docsArea.vue'
+
+// 定义组件发射的事件
+const emit = defineEmits<{
+  'document-click': [doc: any]
+}>();
 
 interface State {
   imgUrl: string | undefined;
@@ -110,6 +114,11 @@ const historyDialog = ref<InstanceType<typeof HistoryDiolog>>();
 const settingInfo = ref<InstanceType<typeof SettingInfo>>();
 const addDocs = ref<InstanceType<typeof AddDocs>>();
 const addPopover = ref();
+
+// 处理文档点击事件，传递给父组件
+const handleDocumentClick = (doc: any) => {
+  emit('document-click', doc);
+};
 
 // 历史记录弹窗
 const changeDiolog = () => {
