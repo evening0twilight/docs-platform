@@ -22,13 +22,8 @@ request.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`
     }
 
-    // 2. 添加请求时间戳（防止缓存）
-    if (config.method === 'get') {
-      config.params = {
-        ...config.params,
-        _t: Date.now()
-      }
-    }
+    // 2. 不再添加时间戳参数（已删除）
+    // 如果需要防止缓存，可以在服务端设置Cache-Control头
 
     // 3. 显示loading（可选）
     // 可以在这里添加全局loading状态
@@ -53,17 +48,28 @@ request.interceptors.response.use(
     
     const { data, status } = response
     
-    // 1. 检查HTTP状态码
-    if (status === 200) {
-      // 2. 检查业务状态码（根据后端API规范调整）
-      if (data.code === 200 || data.success === true) {
-        return data.data || data // 返回实际数据
-      } else {
-        // 业务错误
-        const errorMessage = data.message || '请求失败'
-        Message.error(errorMessage)
-        return Promise.reject(new Error(errorMessage))
+    // 1. 检查HTTP状态码（2xx都视为成功）
+    if (status >= 200 && status < 300) {
+      // 对于204 No Content，直接返回成功标识
+      if (status === 204) {
+        return { success: true, message: '操作成功' }
       }
+      
+      // 对于有数据的响应，检查业务状态码
+      if (data && typeof data === 'object') {
+        // 如果后端返回了特定的成功标识
+        if (data.code === 200 || data.success === true || !data.code) {
+          return data.data || data // 返回实际数据
+        } else {
+          // 业务错误
+          const errorMessage = data.message || '请求失败'
+          Message.error(errorMessage)
+          return Promise.reject(new Error(errorMessage))
+        }
+      }
+      
+      // 直接返回数据
+      return data || { success: true }
     }
     
     return response

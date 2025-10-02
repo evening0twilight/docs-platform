@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import type { RouteRecordRaw } from 'vue-router'
+import { useUserStore } from '@/store/user'
 
 import Login from '@/views/login/index.vue'
 
@@ -15,7 +16,7 @@ const routes: RouteRecordRaw[] = [
     component: () => import('@/components/MainLayout.vue'),
     meta: {
       title: '文档工作台',
-      requiresAuth: false
+      requiresAuth: true
     },
     children: [
       {
@@ -46,7 +47,8 @@ const routes: RouteRecordRaw[] = [
     component: Login,
     meta: {
       title: '登录',
-      hideInMenu: true
+      hideInMenu: true,
+      requiresAuth: false
     }
   },
   // 用户设置页面
@@ -95,13 +97,27 @@ router.beforeEach((to, _from, next) => {
     document.title = `${to.meta.title} - 文档平台`
   }
 
+  // 获取用户store
+  const userStore = useUserStore()
+  
   // 权限检查
-  if (to.meta?.requiresAuth) {
+  if (to.meta?.requiresAuth !== false) {
+    // 默认需要认证，除非明确设置为false
     const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-    if (!token) {
-      next('/login')
-      return
+    
+    if (!token && !userStore.hasToken) {
+      // 没有token，跳转到登录页
+      if (to.path !== '/login') {
+        next('/login')
+        return
+      }
     }
+  }
+
+  // 如果已登录且访问登录页，重定向到工作台
+  if (to.path === '/login' && (userStore.hasToken || localStorage.getItem('token'))) {
+    next('/workspace')
+    return
   }
 
   next()
