@@ -1,5 +1,5 @@
 <template>
-  <div class="docsContainer w-full h-full flex flex-col">
+  <div class="docsContainer w-full flex flex-col">
     <!-- 搜索 -->
     <a-input-search v-model="searchValue" aria-placeholder="搜索文档" allow-clear @search="handleSearch"
       :loading="loading" />
@@ -11,8 +11,8 @@
 
     <!-- 文档树 -->
     <a-tree v-else-if="treeData.length > 0" ref="treeRef" v-model:expanded-keys="expandedKeys"
-      v-model:selected-keys="selectedKeys" :data="treeData" :load-more="loadMore" :virtual-list-props="virtuallistProps"
-      @expand="handleExpand" @select="handleNodeSelect" />
+      v-model:selected-keys="selectedKeys" :data="treeData" :load-more="loadMore" @expand="handleExpand"
+      @select="handleNodeSelect" />
 
     <!-- 空状态 -->
     <div v-else class="flex flex-col items-center justify-center p-8 text-gray-500">
@@ -154,9 +154,9 @@ onMounted(() => {
 
 // 虚拟列表配置
 const virtuallistProps = {
-  height: 300, // 高度
-  hreshold: 100, // 触发虚拟化的节点数量
-  itStaticItemHeight: false, // 动态高度节点
+  // 移除固定高度，让树组件自适应内容高度
+  threshold: 100, // 触发虚拟化的节点数量
+  isStaticItemHeight: false, // 动态高度节点
 };
 
 const loadMore = async (node) => {
@@ -241,6 +241,12 @@ const fetchChildren = async (parentKey) => {
     }, 1000);
   })
 }
+
+// 暴露方法给父组件使用
+defineExpose({
+  refresh: fetchDocuments,
+  fetchDocuments
+});
 
 </script>
 

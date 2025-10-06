@@ -1,5 +1,5 @@
 <template>
-  <div class="sidebarContainer w-full h-full flex flex-col gap-[20px] px-[20px] py-[10px] bg-[#00FFFF] overflow-hidden">
+  <div class="sidebarContainer w-full h-full flex flex-col gap-[20px] px-[20px] py-[10px] bg-[#00FFFF]">
     <!-- logo+用户信息 -->
     <div class="flex items-center justify-between h-[50px] flex-shrink-0">
       <!-- logo -->
@@ -45,7 +45,7 @@
     </div>
     <!-- 文档 -->
     <div class="flex-1 overflow-auto">
-      <DocsArea @document-click="handleDocumentClick" />
+      <DocsArea ref="docsArea" @document-click="handleDocumentClick" />
     </div>
     <!-- 历史记录 -->
     <div class="w-full h-[50px] flex justify-center items-center px-[10px] py-[1px] flex-shrink-0">
@@ -56,7 +56,7 @@
     </div>
     <HistoryDiolog ref="historyDialog" />
     <SettingInfo ref="settingInfo" />
-    <AddDocs ref="addDocs" :title="title" :selected="selected" />
+    <AddDocs ref="addDocs" :title="title" :selected="selected" @created="handleItemCreated" />
   </div>
 </template>
 
@@ -64,7 +64,7 @@
 /**
 * @description 侧边栏组件
 */
-import { ref, onMounted, reactive, toRefs } from 'vue'
+import { ref, onMounted, reactive, toRefs, nextTick } from 'vue'
 import UserDiolog from './sider/user.vue'
 import AddDiolog from './sider/add.vue';
 import HistoryDiolog from './sider/historyDiolog.vue';
@@ -112,7 +112,17 @@ const {
 
 const historyDialog = ref<InstanceType<typeof HistoryDiolog>>();
 const settingInfo = ref<InstanceType<typeof SettingInfo>>();
+// AddDocs对话框的ref
 const addDocs = ref<InstanceType<typeof AddDocs>>();
+// DocsArea组件的ref
+const docsArea = ref<InstanceType<typeof DocsArea>>();
+
+// 在组件挂载后检查ref
+onMounted(() => {
+  nextTick(() => {
+    console.log('nextTick后检查addDocs.value:', addDocs.value);
+  });
+});
 const addPopover = ref();
 
 // 处理文档点击事件，传递给父组件
@@ -132,7 +142,28 @@ const openUserSettingDialog = () => {
 };
 
 const openAddDocsDialog = () => {
-  addDocs.value?.openDialog();
+  console.log('尝试打开AddDocs对话框, addDocs.value:', addDocs.value);
+  if (addDocs.value && typeof addDocs.value.openDialog === 'function') {
+    addDocs.value.openDialog();
+  } else {
+    console.error('addDocs组件还没有准备好或openDialog方法不存在');
+  }
+};
+
+// 处理创建成功事件
+const handleItemCreated = async (item: any) => {
+  console.log('创建成功:', item);
+  // 刷新文档列表
+  if (docsArea.value && typeof docsArea.value.refresh === 'function') {
+    try {
+      await docsArea.value.refresh();
+      console.log('文档列表刷新成功');
+    } catch (error) {
+      console.error('刷新文档列表失败:', error);
+    }
+  } else {
+    console.warn('docsArea组件还没有准备好或refresh方法不存在');
+  }
 };
 
 const selectOne = (item: any) => {

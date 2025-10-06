@@ -1,10 +1,13 @@
 <template>
   <div class="editorContainer w-full h-full flex flex-col overflow-hidden">
+    <!-- 空状态：没有选择文档时显示 -->
+    <EmptyState v-if="!documentId" />
+
     <!-- 加载状态 -->
-    <div v-if="loading" class="loading-overlay">
-      <a-spin size="large" tip="加载文档中..." />
+    <div v-else-if="loading" class="loading-overlay">
+      <a-spin :size="32" tip="加载文档中..." />
     </div>
-    
+
     <!-- 编辑器内容 -->
     <template v-else>
       <!-- 文档信息栏（可选） -->
@@ -13,10 +16,10 @@
         <span v-if="isModified" class="modified-indicator">• 未保存</span>
         <span v-else class="saved-indicator">• 已保存</span>
       </div>
-      
+
       <!-- 工具栏 -->
-      <ToolList :editor="editor" />
-      
+      <ToolList v-if="editor" :editor="editor" />
+
       <!-- 编辑器主体 -->
       <editor-content :editor="editor" class="w-full h-full text-black" />
     </template>
@@ -34,6 +37,7 @@ import Superscript from '@tiptap/extension-superscript'
 import Subscript from '@tiptap/extension-subscript'
 import StarterKit from '@tiptap/starter-kit'
 import ToolList from './editor/ToolList.vue';
+import EmptyState from './EmptyState.vue';
 
 // 定义props（支持路由参数）
 const props = defineProps<{
@@ -83,30 +87,30 @@ const editor = useEditor({
 // 获取文档数据
 const fetchDocument = async () => {
   if (!documentId.value || !editor.value || loading.value) return
-  
+
   // 防止重复请求同一个文档
   if (documentData.value && documentData.value.id.toString() === documentId.value) {
     console.log('文档已加载，跳过重复请求:', documentId.value)
     return
   }
-  
+
   try {
     loading.value = true
     console.log('加载文档:', documentId.value)
-    
+
     const doc = await getDocument(documentId.value)
     documentData.value = doc
-    
+
     // 设置编辑器内容
     editor.value.commands.setContent(doc.content || '')
-    
+
     // 更新标签标题
     tabsStore.updateTabTitle(documentId.value, doc.name)
-    
+
     // 重置修改状态
     isModified.value = false
     tabsStore.markModified(documentId.value, false)
-    
+
     console.log('文档加载成功:', doc)
   } catch (error) {
     console.error('获取文档失败:', error)
@@ -118,16 +122,16 @@ const fetchDocument = async () => {
 // 处理内容变化
 const handleContentChange = () => {
   if (!editor.value || !documentData.value) return
-  
+
   const currentContent = editor.value.getHTML()
   const originalContent = documentData.value.content || ''
   const modified = currentContent !== originalContent
-  
+
   if (modified !== isModified.value) {
     isModified.value = modified
     tabsStore.markModified(documentId.value, modified)
   }
-  
+
   // 自动保存（延迟2秒）
   clearTimeout(autoSaveTimer)
   autoSaveTimer = setTimeout(() => {
@@ -141,20 +145,20 @@ const handleContentChange = () => {
 let autoSaveTimer: number | null = null
 const autoSave = async () => {
   if (!editor.value || !documentId.value) return
-  
+
   try {
     const content = editor.value.getHTML()
     await saveDocumentContent(documentId.value, content)
-    
+
     // 更新原始内容
     if (documentData.value) {
       documentData.value.content = content
     }
-    
+
     // 重置修改状态
     isModified.value = false
     tabsStore.markModified(documentId.value, false)
-    
+
     console.log('自动保存成功')
   } catch (error) {
     console.error('自动保存失败:', error)
@@ -166,20 +170,20 @@ const manualSave = async () => {
   if (!editor.value || !documentId.value) {
     throw new Error('编辑器或文档ID未准备好')
   }
-  
+
   try {
     const content = editor.value.getHTML()
     await saveDocumentContent(documentId.value, content)
-    
+
     // 更新原始内容
     if (documentData.value) {
       documentData.value.content = content
     }
-    
+
     // 重置修改状态
     isModified.value = false
     tabsStore.markModified(documentId.value, false)
-    
+
     console.log('手动保存成功')
     return true
   } catch (error) {
@@ -222,7 +226,7 @@ onMounted(() => {
 
   // 添加事件监听器
   window.addEventListener('manual-save-request', handleGlobalSave)
-  
+
   // 组件卸载时移除监听器
   onBeforeUnmount(() => {
     window.removeEventListener('manual-save-request', handleGlobalSave)
@@ -234,7 +238,7 @@ onBeforeUnmount(() => {
   if (autoSaveTimer) {
     clearTimeout(autoSaveTimer)
   }
-  
+
   // 如果有未保存的修改，进行最后一次保存
   if (isModified.value) {
     autoSave()
