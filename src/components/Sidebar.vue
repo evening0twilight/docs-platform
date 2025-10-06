@@ -27,10 +27,19 @@
       </div>
     </div>
     <!-- 搜索+添加 -->
-    <div class="w-full flex justify-between items-center justify-between h-[50px] flex-shrink-0">
-      <div class="w-[80%]">
-        <a-input placeholder="搜索" allowClear></a-input>
+    <div class="w-full flex items-center h-[50px] flex-shrink-0" style="gap: 20px;">
+      <!-- 搜索框 -->
+      <div class="flex-1">
+        <a-input 
+          v-model="searchKeyword" 
+          placeholder="搜索文档..." 
+          @input="handleSearch"
+          @clear="handleClearSearch"
+          allow-clear
+          :style="{ width: '100%' }"
+        />
       </div>
+      <!-- 添加按钮 -->
       <div class="flex items-center justify-center">
         <a-popover ref="addPopover" position="bl" trigger="click" :content-style="{ padding: '0' }">
           <a-space size="small">
@@ -84,6 +93,7 @@ interface State {
   userInfo: UserInfo; // 将userInfo添加到响应式state中
   title: string; // 确认是添加文档还是文件夹
   selected: string; // 表示选择的是文档还是文件夹
+  searchKeyword: string; // 搜索关键词
 }
 
 // 没有头像的默认图片
@@ -100,7 +110,8 @@ const state = reactive<State>({
     avatar: undefined
   },
   title: '文档',
-  selected: '文档'
+  selected: '文档',
+  searchKeyword: '' // 搜索关键词初始值
 });
 
 const {
@@ -108,6 +119,7 @@ const {
   userInfo,
   title,
   selected,
+  searchKeyword,
 } = toRefs(state);
 
 const historyDialog = ref<InstanceType<typeof HistoryDiolog>>();
@@ -172,6 +184,34 @@ const selectOne = (item: any) => {
   title.value = item.title || item.name;
   selected.value = item.selected || '文档';
   openAddDocsDialog();
+};
+
+// 搜索处理方法
+let searchTimer: any = null;
+const handleSearch = (value: string) => {
+  console.log('搜索关键词:', value);
+  
+  // 防抖处理
+  if (searchTimer) {
+    clearTimeout(searchTimer);
+  }
+  
+  searchTimer = setTimeout(() => {
+    // 调用DocsArea的搜索方法
+    if (docsArea.value && typeof docsArea.value.search === 'function') {
+      docsArea.value.search(value);
+    }
+  }, 300); // 300ms防抖
+};
+
+// 清除搜索
+const handleClearSearch = () => {
+  console.log('清除搜索');
+  searchKeyword.value = '';
+  // 调用DocsArea的重置搜索方法
+  if (docsArea.value && typeof docsArea.value.resetSearch === 'function') {
+    docsArea.value.resetSearch();
+  }
 };
 
 onMounted(() => {

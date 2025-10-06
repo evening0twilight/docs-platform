@@ -1,9 +1,5 @@
 <template>
   <div class="docsContainer w-full flex flex-col">
-    <!-- 搜索 -->
-    <a-input-search v-model="searchValue" aria-placeholder="搜索文档" allow-clear @search="handleSearch"
-      :loading="loading" />
-
     <!-- 加载状态 -->
     <div v-if="loading" class="flex justify-center items-center p-4">
       <a-spin tip="加载中..." />
@@ -54,18 +50,41 @@ const {
 } = toRefs(state);
 
 const handleSearch = async (value: string) => {
+  // 更新搜索值
+  searchValue.value = value;
+  
   if (!value.trim()) {
     // 如果搜索为空，重新获取所有文档
     await fetchDocuments()
+    // 清空展开的节点
+    expandedKeys.value = [];
     return
   }
 
   try {
     loading.value = true
     console.log('搜索关键词:', value)
-    const searchResults = await searchDocuments(value)
-    console.log('搜索结果:', searchResults)
-    rawData.value = searchResults
+    
+    // 先获取完整的文档树
+    const allDocuments = await getDocumentTree()
+    console.log('完整文档树:', allDocuments)
+    
+    // 将完整树数据转换格式
+    const fullTreeData = allDocuments.map(transformToTreeData)
+    console.log('转换后的完整树数据:', fullTreeData)
+    
+    // 使用本地过滤来保持完整的层次结构
+    rawData.value = fullTreeData
+    
+    // 搜索完成后，自动展开所有包含搜索结果的父节点路径
+    setTimeout(() => {
+      const keysToExpand = findParentKeysForMatches(fullTreeData, value);
+      console.log('搜索关键词:', value);
+      console.log('搜索结果数据:', fullTreeData);
+      console.log('需要展开的节点keys:', keysToExpand);
+      expandedKeys.value = keysToExpand;
+      console.log('当前展开的节点:', expandedKeys.value);
+    }, 200); // 增加等待时间，确保树组件完全渲染
   } catch (error) {
     console.error('搜索失败:', error)
     // 如果搜索API失败，使用本地过滤
@@ -73,13 +92,30 @@ const handleSearch = async (value: string) => {
       const tree = await getDocumentTree()
       const flatData = flattenTree(tree.map(transformToTreeData))
       rawData.value = flatData.filter(item => item.title.includes(value))
+      
+      // 本地过滤后也要展开匹配节点的父路径
+      setTimeout(() => {
+        const keysToExpand = findParentKeysForMatches(rawData.value, value);
+        console.log('本地过滤结果数据:', rawData.value);
+        console.log('本地过滤需要展开的节点keys:', keysToExpand);
+        expandedKeys.value = keysToExpand;
+      }, 200);
+      
     } catch (filterError) {
       console.error('本地过滤也失败:', filterError)
       rawData.value = []
+      expandedKeys.value = [];
     }
   } finally {
     loading.value = false
   }
+};
+
+// 重置搜索
+const resetSearch = async () => {
+  searchValue.value = '';
+  expandedKeys.value = []; // 重置展开状态
+  await fetchDocuments();
 };
 
 const handleExpand = (keys: string[]) => {
@@ -209,27 +245,47 @@ const flattenTree = (nodes) => {
   return result;
 }
 
-
-// 搜索时自动展开匹配节点
-watch(searchValue, (val) => {
-  if (val) {
-    expandedKeys.value = findMatchedKeys(rawData.value, val);
-  }
-})
-
-// 查找匹配节点的key路径
-const findMatchedKeys = (nodes, keyword) => {
-  const keys = [];
-  nodes.forEach(node => {
-    if (node.title.includes(keyword)) {
-      keys.push(node.key);
+// 查找包含匹配节点的所有父节点路径
+const findParentKeysForMatches = (nodes: any[], keyword: string): string[] => {
+  const parentKeys = new Set<string>();
+  
+  // 递归函数，返回当前节点路径上是否包含匹配项
+  const traverseNode = (node: any, parentPath: string[] = []): boolean => {
+    const currentPath = [...parentPath, node.key];
+    let hasMatchInSubtree = false;
+    
+    // 检查当前节点是否匹配 - 修复：使用正确的字段名
+    if (node.title && node.title.includes(keyword)) {
+      hasMatchInSubtree = true;
+      console.log(`匹配节点: ${node.title}, key: ${node.key}, 父路径:`, parentPath);
+      // 将当前路径上的所有父节点添加到展开列表
+      parentPath.forEach(parentKey => parentKeys.add(parentKey));
     }
-    if (node.children) {
-      keys.push(...findMatchedKeys(node.children, keyword));
+    
+    // 递归检查子节点
+    if (node.children && Array.isArray(node.children)) {
+      node.children.forEach((child: any) => {
+        if (traverseNode(child, currentPath)) {
+          hasMatchInSubtree = true;
+        }
+      });
     }
-  })
-  return keys;
-}
+    
+    // 如果子树中有匹配项，展开当前节点
+    if (hasMatchInSubtree && node.children && node.children.length > 0) {
+      console.log(`展开父节点: ${node.title}, key: ${node.key}`);
+      parentKeys.add(node.key);
+    }
+    
+    return hasMatchInSubtree;
+  };
+  
+  // 遍历所有根节点
+  nodes.forEach(node => traverseNode(node));
+  
+  console.log('最终展开的节点keys:', Array.from(parentKeys));
+  return Array.from(parentKeys);
+};
 
 const fetchChildren = async (parentKey) => {
   return new Promise(resolve => {
@@ -245,7 +301,9 @@ const fetchChildren = async (parentKey) => {
 // 暴露方法给父组件使用
 defineExpose({
   refresh: fetchDocuments,
-  fetchDocuments
+  fetchDocuments,
+  search: handleSearch,
+  resetSearch
 });
 
 </script>

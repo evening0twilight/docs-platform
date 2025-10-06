@@ -120,9 +120,10 @@ export const deleteDocument = async (id: string | number): Promise<{ message: st
 // ====== 树形结构相关操作 ======
 
 // 获取文件夹树结构
-export const getDocumentTree = async (): Promise<TreeNodeResponse[]> => {
+export const getDocumentTree = async (keyword?: string): Promise<TreeNodeResponse[]> => {
   try {
-    const response = await http.get<TreeNodeResponse[]>('/documents/tree');
+    const url = keyword ? `/documents/tree?keyword=${encodeURIComponent(keyword)}` : '/documents/tree';
+    const response = await http.get<TreeNodeResponse[]>(url);
     return response;
   } catch (error) {
     console.error('获取文档树失败:', error);
