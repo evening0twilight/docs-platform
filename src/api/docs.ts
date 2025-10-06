@@ -3,14 +3,16 @@ import type { TreeNode } from '@/api/type'
 
 // 定义文档相关的类型
 interface CreateDocumentRequest {
-  title: string;
-  content?: string; // 改为string类型
-  parentId?: number; // 改为number类型
+  title: string; // 文档使用 title 字段
+  content?: string;
+  description?: string;
+  type?: string;
+  parentId?: number | null;
 }
 
 interface CreateFolderRequest {
-  title: string;
-  parentId?: number; // 改为number类型
+  name: string; // 文件夹使用 name 字段
+  parentId?: number | null;
 }
 
 interface UpdateDocumentRequest {
@@ -44,6 +46,18 @@ interface TreeNodeResponse extends DocumentResponse {
 interface FolderContentsResponse {
   folders: DocumentResponse[];
   documents: DocumentResponse[];
+}
+
+// 文件夹路径响应类型
+interface FolderPathResponse {
+  currentFolder: DocumentResponse;
+  breadcrumbs: DocumentResponse[];
+}
+
+// 文档路径响应类型（与文件夹路径类似）
+interface DocumentPathResponse {
+  currentDocument: DocumentResponse;
+  breadcrumbs: DocumentResponse[];
 }
 
 // ====== 基础CRUD操作 ======
@@ -117,12 +131,23 @@ export const getDocumentTree = async (): Promise<TreeNodeResponse[]> => {
 };
 
 // 获取文件夹路径
-export const getFolderPath = async (folderId: string | number): Promise<string[]> => {
+export const getFolderPath = async (folderId: string | number): Promise<FolderPathResponse> => {
   try {
-    const response = await http.get<string[]>(`/documents/folder/${folderId}/path`);
+    const response = await http.get<FolderPathResponse>(`/documents/folders/${folderId}/path`);
     return response;
   } catch (error) {
     console.error('获取文件夹路径失败:', error);
+    throw error;
+  }
+};
+
+// 获取文档路径
+export const getDocumentPath = async (documentId: string | number): Promise<DocumentPathResponse> => {
+  try {
+    const response = await http.get<DocumentPathResponse>(`/documents/documents/${documentId}/path`);
+    return response;
+  } catch (error) {
+    console.error('获取文档路径失败:', error);
     throw error;
   }
 };
