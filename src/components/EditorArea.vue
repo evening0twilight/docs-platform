@@ -103,7 +103,11 @@ const editor = useEditor({
         levels: [1, 2, 3, 4, 5, 6],
       },
     }),
-    Underline,
+    Underline.configure({
+      HTMLAttributes: {
+        class: 'my-custom-class',
+      },
+    }),
     Highlight.configure({
       multicolor: true,
       HTMLAttributes: {
