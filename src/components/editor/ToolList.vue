@@ -81,21 +81,21 @@
       :class="{ 'is-active': editor?.isActive('superscript') }"
       @click="editor.chain().focus().toggleSuperscript().run()"
     >
-      <img :src="colorHighlight" alt="上标">
+      <img :src="up" alt="上标">
     </div>
     <!-- 下标 -->
     <div
       :class="{ 'is-active': editor?.isActive('subscript') }"
       @click="editor.chain().focus().toggleSubscript().run()"
     >
-      <img :src="colorHighlight" alt="上标">
+      <img :src="down" alt="上标">
     </div>
     <!-- 高亮强调(得加上颜色),现在我就加一个普通的高亮后面再加上其他的颜色选项 -->
     <div
       :class="{ 'is-active': editor?.isActive('highlight') }"
       @click="editor.chain().focus().toggleHighlight().run()"
     >
-      <img :src="colorHighlight" alt="高亮强调(普通)">
+      <img :src="hightLight" alt="高亮强调(普通)">
     </div>
   </div>
 </template>
@@ -119,6 +119,9 @@ import strong from '@/assets/editorIcon/jiacu.svg'
 import xieti from '@/assets/editorIcon/xieti.svg'
 import code from '@/assets/editorIcon/daimakuai.svg'
 import colorHighlight from '@/assets/folder.svg'
+import down from '@/assets/down.svg'
+import up from '@/assets/up.svg'
+import hightLight from '@/assets/hightLight.svg'
 
 interface Props {
   editor: Editor | null

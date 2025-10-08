@@ -15,6 +15,7 @@
     "@tiptap/extension-highlight": "^3.0.9",
     "@tiptap/extension-subscript": "^3.0.9",
     "@tiptap/extension-superscript": "^3.0.9",
+    "@tiptap/extension-underline": "^3.6.5",
     "@tiptap/pm": "^3.0.7",
     "@tiptap/starter-kit": "^3.0.7",
     "@tiptap/vue-3": "^3.0.7",
