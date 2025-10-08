@@ -35,6 +35,7 @@ import { getDocument, saveDocumentContent } from '@/api/docs'
 import Highlight from '@tiptap/extension-highlight'
 import Superscript from '@tiptap/extension-superscript'
 import Subscript from '@tiptap/extension-subscript'
+import Underline from '@tiptap/extension-underline'
 import StarterKit from '@tiptap/starter-kit'
 import ToolList from './editor/ToolList.vue';
 import EmptyState from './EmptyState.vue';
@@ -71,8 +72,44 @@ const {
 const editor = useEditor({
   content: '',
   extensions: [
-    StarterKit,
-    Highlight,
+    StarterKit.configure({
+      // 确保所有功能都启用
+      bulletList: {
+        HTMLAttributes: {
+          class: 'bullet-list',
+        },
+      },
+      orderedList: {
+        HTMLAttributes: {
+          class: 'ordered-list',
+        },
+      },
+      listItem: {
+        HTMLAttributes: {
+          class: 'list-item',
+        },
+      },
+      codeBlock: {
+        HTMLAttributes: {
+          class: 'code-block',
+        },
+      },
+      paragraph: {
+        HTMLAttributes: {
+          class: 'paragraph',
+        },
+      },
+      heading: {
+        levels: [1, 2, 3, 4, 5, 6],
+      },
+    }),
+    Underline,
+    Highlight.configure({
+      multicolor: true,
+      HTMLAttributes: {
+        class: 'highlight',
+      },
+    }),
     Subscript,
     Superscript
   ],
@@ -312,5 +349,88 @@ onBeforeUnmount(() => {
   margin: 0 !important;
   padding: 10px 5px 10px 5px !important;
   overflow: auto;
+}
+
+/* 列表样式 */
+.editorContainer :deep(.ProseMirror ul),
+.editorContainer :deep(.ProseMirror .bullet-list) {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.editorContainer :deep(.ProseMirror ol),
+.editorContainer :deep(.ProseMirror .ordered-list) {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+
+.editorContainer :deep(.ProseMirror li),
+.editorContainer :deep(.ProseMirror .list-item) {
+  margin: 0.25rem 0;
+}
+
+.editorContainer :deep(.ProseMirror li p) {
+  margin: 0;
+}
+
+/* 段落样式 */
+.editorContainer :deep(.ProseMirror p),
+.editorContainer :deep(.ProseMirror .paragraph) {
+  margin: 0.5rem 0;
+  line-height: 1.6;
+}
+
+/* 代码块样式 */
+.editorContainer :deep(.ProseMirror pre),
+.editorContainer :deep(.ProseMirror .code-block) {
+  background: #f5f5f5;
+  color: #333;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  margin: 0.5rem 0;
+  overflow-x: auto;
+}
+
+.editorContainer :deep(.ProseMirror pre code) {
+  background: none;
+  padding: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* 高亮样式 */
+.editorContainer :deep(.ProseMirror mark),
+.editorContainer :deep(.ProseMirror .highlight) {
+  background-color: #fef08a;
+  color: inherit;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+}
+
+/* 标题样式 */
+.editorContainer :deep(.ProseMirror h1) {
+  font-size: 2rem;
+  font-weight: bold;
+  margin: 1rem 0 0.5rem;
+}
+
+.editorContainer :deep(.ProseMirror h2) {
+  font-size: 1.5rem;
+  font-weight: bold;
+  margin: 0.875rem 0 0.5rem;
+}
+
+.editorContainer :deep(.ProseMirror h3) {
+  font-size: 1.25rem;
+  font-weight: bold;
+  margin: 0.75rem 0 0.5rem;
+}
+
+/* 确保编辑器获得焦点时有正确的样式 */
+.editorContainer :deep(.ProseMirror:focus) {
+  outline: none;
 }
 </style>
