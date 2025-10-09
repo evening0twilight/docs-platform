@@ -5,6 +5,7 @@ import type { UserInfo } from '@/components/type'
 interface UserState {
   token: string
   name: string
+  email: string
   avatar: string
   roles: string[]
   isLoggedIn: boolean
@@ -19,6 +20,7 @@ export const useUserStore = defineStore('user', {
   state: (): UserState => ({
     token: '',
     name: '',
+    email: '',
     avatar: '',
     roles: [],
     isLoggedIn: false
@@ -28,6 +30,7 @@ export const useUserStore = defineStore('user', {
     hasToken: (state) => !!state.token,
     userInfo: (state) => ({
       name: state.name,
+      email: state.email,
       avatar: state.avatar,
       roles: state.roles
     })
@@ -38,6 +41,7 @@ export const useUserStore = defineStore('user', {
     setUser(user: Partial<UserState>) {
       if (user.token !== undefined) this.token = user.token
       if (user.name !== undefined) this.name = user.name
+      if (user.email !== undefined) this.email = user.email
       if (user.avatar !== undefined) this.avatar = user.avatar
       if (user.roles !== undefined) this.roles = user.roles
       if (user.isLoggedIn !== undefined) this.isLoggedIn = user.isLoggedIn
@@ -95,6 +99,7 @@ export const useUserStore = defineStore('user', {
           // 设置用户信息
           this.setUser({
             name: userInfo?.name || loginParams.username,
+            email: userInfo?.email || '',
             avatar: userInfo?.avatar || '',
             roles: [], 
             isLoggedIn: true
@@ -121,6 +126,7 @@ export const useUserStore = defineStore('user', {
         const userInfo: UserInfo = await getUserInfo()
         this.setUser({
           name: userInfo.name,
+          email: userInfo.email || '',
           avatar: userInfo.avatar || '',
           roles: [], // UserInfo没有roles字段，使用默认值
           isLoggedIn: true
@@ -139,6 +145,7 @@ export const useUserStore = defineStore('user', {
     logout() {
       this.token = ''
       this.name = ''
+      this.email = ''
       this.avatar = ''
       this.roles = []
       this.isLoggedIn = false

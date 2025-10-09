@@ -30,14 +30,8 @@
     <div class="w-full flex items-center h-[50px] flex-shrink-0" style="gap: 20px;">
       <!-- 搜索框 -->
       <div class="flex-1">
-        <a-input 
-          v-model="searchKeyword" 
-          placeholder="搜索文档..." 
-          @input="handleSearch"
-          @clear="handleClearSearch"
-          allow-clear
-          :style="{ width: '100%' }"
-        />
+        <a-input v-model="searchKeyword" placeholder="搜索文档..." @input="handleSearch" @clear="handleClearSearch"
+          allow-clear :style="{ width: '100%' }" />
       </div>
       <!-- 添加按钮 -->
       <div class="flex items-center justify-center">
@@ -73,7 +67,8 @@
 /**
 * @description 侧边栏组件
 */
-import { ref, onMounted, reactive, toRefs, nextTick } from 'vue'
+import { ref, onMounted, reactive, toRefs, nextTick, computed } from 'vue'
+import { useUserStore } from '@/store/user'
 import UserDiolog from './sider/user.vue'
 import AddDiolog from './sider/add.vue';
 import HistoryDiolog from './sider/historyDiolog.vue';
@@ -83,6 +78,9 @@ import SettingInfo from './sider/diolog/settingInfo.vue'
 import AddDocs from './sider/diolog/addDocs.vue';
 import DocsArea from './sider/docsArea.vue'
 
+// 获取用户store
+const userStore = useUserStore()
+
 // 定义组件发射的事件
 const emit = defineEmits<{
   'document-click': [doc: any]
@@ -90,7 +88,6 @@ const emit = defineEmits<{
 
 interface State {
   imgUrl: string | undefined;
-  userInfo: UserInfo; // 将userInfo添加到响应式state中
   title: string; // 确认是添加文档还是文件夹
   selected: string; // 表示选择的是文档还是文件夹
   searchKeyword: string; // 搜索关键词
@@ -101,14 +98,6 @@ const unImgUrl = ref<string>("https://p1-arco.byteimg.com/tos-cn-i-uwbnlip3yd/3e
 
 const state = reactive<State>({
   imgUrl: 'https://p1-arco.byteimg.com/tos-cn-i-uwbnlip3yd/3ee5f13fb09879ecb5185e440cef6eb9.png~tplv-uwbnlip3yd-webp.webp',
-  // 初始化userInfo，包含所有必要的字段
-  userInfo: {
-    id: '10001',
-    name: '默认用户',
-    email: 'default@example.com',
-    power: 1,
-    avatar: undefined
-  },
   title: '文档',
   selected: '文档',
   searchKeyword: '' // 搜索关键词初始值
@@ -116,11 +105,19 @@ const state = reactive<State>({
 
 const {
   imgUrl,
-  userInfo,
   title,
   selected,
   searchKeyword,
 } = toRefs(state);
+
+// 从store中获取用户信息
+const userInfo = computed<UserInfo>(() => ({
+  id: userStore.token || '10001', // 使用token作为临时id
+  name: userStore.name || '默认用户',
+  email: userStore.email || '',
+  power: 1,
+  avatar: userStore.avatar || undefined
+}));
 
 const historyDialog = ref<InstanceType<typeof HistoryDiolog>>();
 const settingInfo = ref<InstanceType<typeof SettingInfo>>();
@@ -129,11 +126,18 @@ const addDocs = ref<InstanceType<typeof AddDocs>>();
 // DocsArea组件的ref
 const docsArea = ref<InstanceType<typeof DocsArea>>();
 
-// 在组件挂载后检查ref
-onMounted(() => {
+// 在组件挂载后检查ref并获取用户信息
+onMounted(async () => {
   nextTick(() => {
     console.log('nextTick后检查addDocs.value:', addDocs.value);
   });
+
+  // 从store获取用户信息
+  if (userStore.token && !userStore.name) {
+    // 如果有token但没有用户信息，尝试获取
+    await userStore.fetchUserInfo();
+    console.log('已获取用户信息:', userStore.name, userStore.avatar);
+  }
 });
 const addPopover = ref();
 
@@ -190,12 +194,12 @@ const selectOne = (item: any) => {
 let searchTimer: any = null;
 const handleSearch = (value: string) => {
   console.log('搜索关键词:', value);
-  
+
   // 防抖处理
   if (searchTimer) {
     clearTimeout(searchTimer);
   }
-  
+
   searchTimer = setTimeout(() => {
     // 调用DocsArea的搜索方法
     if (docsArea.value && typeof docsArea.value.search === 'function') {
@@ -213,22 +217,6 @@ const handleClearSearch = () => {
     docsArea.value.resetSearch();
   }
 };
-
-onMounted(() => {
-  // 模拟获取用户信息 - 更新已有的userInfo对象
-  userInfo.value = {
-    id: '10001',
-    name: '张三',
-    email: 'zhangsan@example.com',
-    power: 2, // 添加必需的power字段
-    avatar: imgUrl.value // 使用imgUrl作为头像
-  };
-
-  // 这里可以添加实际的API调用来获取用户信息
-  // fetchUserInfo().then(data => {
-  //   userInfo.value = data;
-  // });
-});
 </script>
 
 <style scoped></style>

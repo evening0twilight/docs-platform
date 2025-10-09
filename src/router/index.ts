@@ -100,22 +100,30 @@ router.beforeEach((to, _from, next) => {
   // 获取用户store
   const userStore = useUserStore()
   
+  // 获取token
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+  
   // 权限检查
   if (to.meta?.requiresAuth !== false) {
     // 默认需要认证，除非明确设置为false
-    const token = localStorage.getItem('token') || sessionStorage.getItem('token')
     
     if (!token && !userStore.hasToken) {
       // 没有token，跳转到登录页
+      console.warn('未找到token，跳转到登录页')
       if (to.path !== '/login') {
         next('/login')
         return
       }
+    } else if (token && !userStore.hasToken) {
+      // 有token但store中没有，需要初始化
+      console.log('检测到token，初始化用户状态')
+      userStore.initUserState()
     }
   }
 
   // 如果已登录且访问登录页，重定向到工作台
-  if (to.path === '/login' && (userStore.hasToken || localStorage.getItem('token'))) {
+  if (to.path === '/login' && (userStore.hasToken || token)) {
+    console.log('已登录，从登录页重定向到工作台')
     next('/workspace')
     return
   }

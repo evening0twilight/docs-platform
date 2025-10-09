@@ -1,6 +1,7 @@
 import axios from 'axios'
 import type { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
 import { Message } from '@arco-design/web-vue'
+import router from '@/router'
 
 // 创建axios实例
 const request: AxiosInstance = axios.create({
@@ -18,6 +19,14 @@ request.interceptors.request.use(
 
     // 1. 添加token到请求头
     const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+    
+    // 如果没有token且不是登录/注册请求，可能需要跳转到登录页
+    if (!token && config.url && 
+        !config.url.includes('/login') && 
+        !config.url.includes('/register')) {
+      console.warn('请求时未找到token，可能需要重新登录');
+    }
+    
     if (token && config.headers) {
       config.headers.Authorization = `Bearer ${token}`
     }
@@ -93,12 +102,16 @@ request.interceptors.response.use(
           Message.error('请求参数错误')
           break
         case 401:
-          Message.error('未授权，请重新登录')
+          Message.error('登录已过期，请重新登录')
           // 清除token并跳转到登录页
           localStorage.removeItem('token')
           sessionStorage.removeItem('token')
-          // 可以在这里添加路由跳转到登录页
-          // router.push('/login')
+          // 跳转到登录页
+          setTimeout(() => {
+            if (router.currentRoute.value.path !== '/login') {
+              router.push('/login')
+            }
+          }, 1000)
           break
         case 403:
           Message.error('权限不足')
