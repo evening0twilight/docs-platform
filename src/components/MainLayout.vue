@@ -35,6 +35,7 @@ import { onMounted, computed, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue';
 import { useRouter, useRoute } from 'vue-router'
 import { useTabsStore } from '@/store/tabs'
+import { useUserStore } from '@/store/user'
 import { getFolderPath, getDocumentPath } from '@/api/docs'
 import Sidebar from './Sidebar.vue';
 import TabBar from './editor/TabBar.vue'
@@ -43,6 +44,7 @@ import Footer from './sider/Footer.vue'
 const router = useRouter()
 const route = useRoute()
 const tabsStore = useTabsStore()
+const userStore = useUserStore()
 
 // 面包屑数据
 const breadcrumbItems = ref<Array<{ id: string | number, name: string }>>([])
@@ -102,8 +104,18 @@ watch(() => tabsStore.activeTabId, () => {
   updateBreadcrumb()
 }, { immediate: true })
 
-// 组件挂载时修复可能存在的错误标签路由
+// 组件挂载时检查token和修复标签路由
 onMounted(() => {
+  // 检查token是否存在
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+  if (!token && !userStore.hasToken) {
+    console.warn('MainLayout: 未找到token，跳转到登录页')
+    Message.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  
+  // 修复可能存在的错误标签路由
   tabsStore.fixAllTabRoutes()
 })
 

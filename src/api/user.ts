@@ -82,13 +82,42 @@ export const getUserInfo = async (): Promise<UserInfo> => {
   }
 };
 
+// 更新用户信息API请求类型
+interface UpdateUserInfoRequest {
+  username?: string;
+  email?: string;
+}
+
 // 更新用户信息API
-export const updateUserInfo = async (userData: Partial<UserInfo>): Promise<UserInfo> => {
+export const updateUserInfo = async (userData: UpdateUserInfoRequest): Promise<UserInfo> => {
   try {
     const response = await http.put<UserInfo>('/users/profile', userData);
     return response;
   } catch (error) {
     console.error('更新用户信息失败:', error);
+    throw error;
+  }
+};
+
+// 修改密码API请求类型
+interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+// 修改密码API响应类型
+interface ChangePasswordResponse {
+  message: string;
+}
+
+// 修改密码API
+export const changePassword = async (passwordData: ChangePasswordRequest): Promise<ChangePasswordResponse> => {
+  try {
+    const response = await http.put<ChangePasswordResponse>('/users/password', passwordData);
+    return response;
+  } catch (error) {
+    console.error('修改密码失败:', error);
     throw error;
   }
 };
