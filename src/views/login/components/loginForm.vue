@@ -26,32 +26,28 @@
         <h2 class="login-title">欢迎登录</h2>
         <form class="login-form" @submit.prevent="handleLogin">
           <div class="form-group">
-            <input 
-              type="text" 
-              placeholder="用户名" 
-              class="glass-input"
-              v-model="loginForm.username"
-              required
-            >
+            <input type="text" placeholder="用户名" class="glass-input" v-model="loginForm.username" required>
           </div>
           <div class="form-group">
-            <input 
-              type="password" 
-              placeholder="密码" 
-              class="glass-input"
-              v-model="loginForm.password"
-              required
-            >
+            <input type="password" placeholder="密码" class="glass-input" v-model="loginForm.password" required>
           </div>
-          <button type="submit" class="glass-button" :disabled="loading">
-            {{ loading ? '登录中...' : '登录' }}
-          </button>
+          <div class="flex gap-4">
+            <button type="submit" class="glass-button" :disabled="loading">
+              {{ loading ? '登录中...' : '登录' }}
+            </button>
+            <button type="button" class="glass-button" @click="handleRegisterClick">
+              注册
+            </button>
+          </div>
           <div v-if="errorMessage" class="error-message">
             {{ errorMessage }}
           </div>
         </form>
       </div>
     </div>
+
+    <!-- 注册组件 -->
+    <Register ref="registerRef" />
   </div>
 </template>
 
@@ -60,11 +56,15 @@ import { ref, reactive } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { Message } from '@arco-design/web-vue'
+import Register from './registerFrom.vue'
 
 // 路由实例
 const router = useRouter()
 // 用户store
 const userStore = useUserStore()
+
+// 注册组件引用
+const registerRef = ref<InstanceType<typeof Register>>()
 
 // 登录表单数据
 const loginForm = reactive({
@@ -122,12 +122,17 @@ const handleMouseMove = (e: MouseEvent) => {
   const maxTilt = 18
   const rotateY = ((x - centerX) / centerX) * maxTilt
   const rotateX = -((y - centerY) / centerY) * maxTilt
-  ;(tiltCard.value as HTMLElement).style.transform = `perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.03)`
+    ; (tiltCard.value as HTMLElement).style.transform = `perspective(600px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) scale(1.03)`
 }
 
 const handleMouseLeave = () => {
   if (!tiltCard.value) return
-  ;(tiltCard.value as HTMLElement).style.transform = 'perspective(600px) rotateX(0deg) rotateY(0deg) scale(1)'
+    ; (tiltCard.value as HTMLElement).style.transform = 'perspective(600px) rotateX(0deg) rotateY(0deg) scale(1)'
+}
+
+// 打开注册弹窗
+const handleRegisterClick = () => {
+  registerRef.value?.handleOpen()
 }
 </script>
 
