@@ -66,14 +66,36 @@ request.interceptors.response.use(
       
       // 对于有数据的响应，检查业务状态码
       if (data && typeof data === 'object') {
-        // 如果后端返回了特定的成功标识
-        if (data.code === 200 || data.success === true || !data.code) {
-          return data.data || data // 返回实际数据
-        } else {
-          // 业务错误
-          const errorMessage = data.message || '请求失败'
-          Message.error(errorMessage)
-          return Promise.reject(new Error(errorMessage))
+        // 检查后端返回的 statusCode 字段（优先级最高）
+        if (data.statusCode !== undefined) {
+          // 后端使用 statusCode 字段，直接返回完整数据
+          if (data.statusCode === 200 || data.statusCode === 201) {
+            return data // 返回完整的响应数据，包含 statusCode, message, data 等
+          } else {
+            // 业务错误
+            const errorMessage = data.message || '请求失败'
+            Message.error(errorMessage)
+            return Promise.reject(new Error(errorMessage))
+          }
+        }
+        // 检查后端返回的 code 字段
+        else if (data.code !== undefined) {
+          if (data.code === 200) {
+            return data.data || data // 返回实际数据
+          } else {
+            // 业务错误
+            const errorMessage = data.message || '请求失败'
+            Message.error(errorMessage)
+            return Promise.reject(new Error(errorMessage))
+          }
+        }
+        // 如果后端返回了 success 标识
+        else if (data.success === true) {
+          return data.data || data
+        }
+        // 没有明确的状态码字段，假设成功
+        else {
+          return data
         }
       }
       
@@ -97,12 +119,15 @@ request.interceptors.response.use(
       // 服务器返回了错误状态码
       const { status, data } = response
       
+      // 提取后端返回的错误信息
+      const backendMessage = (data as any)?.message || ''
+      
       switch (status) {
         case 400:
-          Message.error('请求参数错误')
+          Message.error(backendMessage || '请求参数错误')
           break
         case 401:
-          Message.error('登录已过期，请重新登录')
+          Message.error(backendMessage || '登录已过期，请重新登录')
           // 清除token并跳转到登录页
           localStorage.removeItem('token')
           sessionStorage.removeItem('token')
@@ -114,25 +139,25 @@ request.interceptors.response.use(
           }, 1000)
           break
         case 403:
-          Message.error('权限不足')
+          Message.error(backendMessage || '权限不足')
           break
         case 404:
-          Message.error('请求的资源不存在')
+          Message.error(backendMessage || '请求的资源不存在')
           break
         case 500:
-          Message.error('服务器内部错误')
+          Message.error(backendMessage || '服务器内部错误')
           break
         case 502:
-          Message.error('网关错误')
+          Message.error(backendMessage || '网关错误')
           break
         case 503:
-          Message.error('服务不可用')
+          Message.error(backendMessage || '服务不可用')
           break
         case 504:
-          Message.error('网关超时')
+          Message.error(backendMessage || '网关超时')
           break
         default:
-          Message.error((data as any)?.message || `请求失败 (${status})`)
+          Message.error(backendMessage || `请求失败 (${status})`)
       }
     } else if (message.includes('timeout')) {
       // 请求超时

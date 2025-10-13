@@ -21,6 +21,61 @@
     <!-- 表单容器包裹器 -->
     <div class="form-wrapper">
       <div class="form-container" :style="{ transform: `translateX(${translateX}%)` }">
+        <!-- 忘记密码表单 -->
+        <div class="glass-component forgot-password-card" ref="forgotPasswordCard">
+          <div class="glass-effect"></div>
+          <div class="glass-tint"></div>
+          <div class="glass-shine"></div>
+          <div class="glass-content">
+            <h2 class="login-title">重置密码</h2>
+            <form @submit.prevent="handleResetPassword">
+              <div class="form-group">
+                <input type="email" placeholder="邮箱" class="glass-input" v-model="resetPasswordForm.email" required>
+              </div>
+              <div class="form-group verification-group">
+                <input type="text" placeholder="验证码" class="glass-input verification-input"
+                  v-model="resetPasswordForm.code" required maxlength="6">
+                <button type="button" class="code-button" @click="sendResetCode"
+                  :disabled="resetCodeSending || resetCountdown > 0">
+                  {{ resetCodeButtonText }}
+                </button>
+              </div>
+              <div class="form-group password-group">
+                <input :type="showResetNewPassword ? 'text' : 'password'" placeholder="新密码（至少6位）" class="glass-input"
+                  v-model="resetPasswordForm.newPassword" required minlength="6">
+                <button type="button" class="toggle-password" @click="showResetNewPassword = !showResetNewPassword">
+                  {{ showResetNewPassword ? '👁️' : '👁️‍🗨️' }}
+                </button>
+              </div>
+              <div class="form-group password-group">
+                <input :type="showResetConfirmPassword ? 'text' : 'password'" placeholder="确认密码" class="glass-input"
+                  :class="{ 'input-error': resetPasswordForm.confirmPassword && resetPasswordForm.newPassword !== resetPasswordForm.confirmPassword }"
+                  v-model="resetPasswordForm.confirmPassword" required>
+                <button type="button" class="toggle-password"
+                  @click="showResetConfirmPassword = !showResetConfirmPassword">
+                  {{ showResetConfirmPassword ? '👁️' : '👁️‍🗨️' }}
+                </button>
+              </div>
+              <div
+                v-if="resetPasswordForm.confirmPassword && resetPasswordForm.newPassword !== resetPasswordForm.confirmPassword"
+                class="inline-error">
+                ⚠️ 两次输入的密码不一致
+              </div>
+              <div class="form-group button-group">
+                <button type="button" class="glass-button cancel-button" @click="cancelReset">
+                  取消
+                </button>
+                <button type="submit" class="glass-button" :disabled="!isResetFormValid || loading">
+                  {{ loading ? '重置中...' : '确定' }}
+                </button>
+              </div>
+              <div v-if="resetPasswordErrorMessage" class="error-message">
+                {{ resetPasswordErrorMessage }}
+              </div>
+            </form>
+          </div>
+        </div>
+
         <!-- 登录表单 -->
         <div class="glass-component login-card" ref="loginCard">
           <div class="glass-effect"></div>
@@ -56,8 +111,12 @@
                 </div>
               </template>
 
-              <div class="form-group">
-                <input type="password" placeholder="密码" class="glass-input" v-model="loginForm.password" required>
+              <div class="form-group password-group">
+                <input :type="showLoginPassword ? 'text' : 'password'" placeholder="密码" class="glass-input"
+                  v-model="loginForm.password" required>
+                <button type="button" class="toggle-password" @click="showLoginPassword = !showLoginPassword">
+                  {{ showLoginPassword ? '👁️' : '👁️‍🗨️' }}
+                </button>
               </div>
               <button type="submit" class="glass-button" :disabled="loading">
                 {{ loading ? '登录中...' : '登录' }}
@@ -66,6 +125,9 @@
                 {{ loginErrorMessage }}
               </div>
             </form>
+            <div class="forgot-password-link">
+              <span class="link-btn" @click="switchToForgotPassword">忘记密码？</span>
+            </div>
             <div class="switch-form">
               还没有账号？
               <span class="switch-btn" @click="switchToRegister">
@@ -73,6 +135,7 @@
                 <span class="register-arrow">→</span>
               </span>
             </div>
+
           </div>
         </div>
 
@@ -97,12 +160,25 @@
               <div class="form-group">
                 <input type="text" placeholder="用户名" class="glass-input" v-model="registerForm.username" required>
               </div>
-              <div class="form-group">
-                <input type="password" placeholder="密码" class="glass-input" v-model="registerForm.password" required>
+              <div class="form-group password-group">
+                <input :type="showRegisterPassword ? 'text' : 'password'" placeholder="密码（至少6位）" class="glass-input"
+                  v-model="registerForm.password" required minlength="6">
+                <button type="button" class="toggle-password" @click="showRegisterPassword = !showRegisterPassword">
+                  {{ showRegisterPassword ? '👁️' : '👁️‍🗨️' }}
+                </button>
               </div>
-              <div class="form-group">
-                <input type="password" placeholder="确认密码" class="glass-input" v-model="registerForm.confirmPassword"
-                  required>
+              <div class="form-group password-group">
+                <input :type="showRegisterConfirmPassword ? 'text' : 'password'" placeholder="确认密码" class="glass-input"
+                  :class="{ 'input-error': registerForm.confirmPassword && registerForm.password !== registerForm.confirmPassword }"
+                  v-model="registerForm.confirmPassword" required>
+                <button type="button" class="toggle-password"
+                  @click="showRegisterConfirmPassword = !showRegisterConfirmPassword">
+                  {{ showRegisterConfirmPassword ? '👁️' : '👁️‍🗨️' }}
+                </button>
+              </div>
+              <div v-if="registerForm.confirmPassword && registerForm.password !== registerForm.confirmPassword"
+                class="inline-error">
+                ⚠️ 两次输入的密码不一致
               </div>
               <button type="submit" class="glass-button" :disabled="loading">
                 {{ loading ? '注册中...' : '注册' }}
@@ -130,10 +206,12 @@ import { ref, reactive, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user'
 import { Message } from '@arco-design/web-vue'
-import { registerUser, sendVerificationCode } from '@/api/user'
+import { registerUser, sendVerificationCode, resetPassword } from '@/api/user'
 
-// 控制表单切换的变量 (0 = 登录, -50 = 注册)
-const translateX = ref(0)
+// 控制表单切换的变量
+// 布局：[忘记密码] [登录] [注册]
+// 0% = 显示忘记密码, -33.333% = 显示登录(默认), -66.666% = 显示注册
+const translateX = ref(-33.333)
 
 // 登录方式：username 或 email
 const loginType = ref<'username' | 'email'>('username')
@@ -159,21 +237,59 @@ const registerForm = reactive({
   code: ''
 })
 
+// 重置密码表单数据
+const resetPasswordForm = reactive({
+  email: '',
+  code: '',
+  newPassword: '',
+  confirmPassword: ''
+})
+
 // 状态管理
 const loading = ref(false)
 const loginErrorMessage = ref('')
 const registerErrorMessage = ref('')
+const resetPasswordErrorMessage = ref('')
+
+// 密码可见性控制
+const showLoginPassword = ref(false)
+const showRegisterPassword = ref(false)
+const showRegisterConfirmPassword = ref(false)
+const showResetNewPassword = ref(false)
+const showResetConfirmPassword = ref(false)
 
 // 验证码相关状态
 const codeSending = ref(false)
 const countdown = ref(0)
 let countdownTimer: number | null = null
 
+// 重置密码验证码相关状态
+const resetCodeSending = ref(false)
+const resetCountdown = ref(0)
+let resetCountdownTimer: number | null = null
+
 // 验证码按钮文本
 const codeButtonText = computed(() => {
   if (codeSending.value) return '发送中...'
   if (countdown.value > 0) return `${countdown.value}s后重试`
   return '获取验证码'
+})
+
+// 重置密码验证码按钮文本
+const resetCodeButtonText = computed(() => {
+  if (resetCodeSending.value) return '发送中...'
+  if (resetCountdown.value > 0) return `${resetCountdown.value}s后重试`
+  return '获取验证码'
+})
+
+// 重置密码表单验证
+const isResetFormValid = computed(() => {
+  if (!resetPasswordForm.email || !resetPasswordForm.code ||
+    !resetPasswordForm.newPassword || !resetPasswordForm.confirmPassword) {
+    return false
+  }
+  // 检查两次密码是否一致
+  return resetPasswordForm.newPassword === resetPasswordForm.confirmPassword
 })
 
 // 发送验证码
@@ -359,14 +475,159 @@ const handleRegister = async () => {
 
 // 切换到注册表单
 const switchToRegister = () => {
-  translateX.value = -50
+  translateX.value = -66.666 // 向左移动到注册表单（第3个）
   loginErrorMessage.value = ''
 }
 
 // 切换到登录表单
 const switchToLogin = () => {
-  translateX.value = 0
+  translateX.value = -33.333 // 中间位置是登录表单（第2个）
   registerErrorMessage.value = ''
+}
+
+// 切换到忘记密码表单
+const switchToForgotPassword = () => {
+  translateX.value = 0 // 最左边是忘记密码表单（第1个）
+  loginErrorMessage.value = ''
+}
+
+// 取消重置，返回登录
+const cancelReset = () => {
+  translateX.value = -33.333 // 返回登录表单（第2个）
+  resetPasswordErrorMessage.value = ''
+  // 清空重置密码表单
+  Object.assign(resetPasswordForm, {
+    email: '',
+    code: '',
+    newPassword: '',
+    confirmPassword: ''
+  })
+  // 清除倒计时
+  if (resetCountdownTimer) {
+    clearInterval(resetCountdownTimer)
+    resetCountdownTimer = null
+    resetCountdown.value = 0
+  }
+}
+
+// 发送重置密码验证码
+const sendResetCode = async () => {
+  // 验证邮箱
+  if (!resetPasswordForm.email) {
+    Message.warning('请先输入邮箱地址')
+    return
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(resetPasswordForm.email)) {
+    Message.warning('请输入有效的邮箱地址')
+    return
+  }
+
+  resetCodeSending.value = true
+
+  try {
+    const response = await sendVerificationCode({
+      email: resetPasswordForm.email,
+      type: 'reset_password'
+    })
+
+    if (response.statusCode === 200) {
+      Message.success(response.data.message || '验证码已发送')
+      // 开始倒计时
+      resetCountdown.value = 60
+      resetCountdownTimer = window.setInterval(() => {
+        resetCountdown.value--
+        if (resetCountdown.value <= 0 && resetCountdownTimer) {
+          clearInterval(resetCountdownTimer)
+          resetCountdownTimer = null
+        }
+      }, 1000)
+    } else {
+      Message.error('验证码发送失败')
+    }
+  } catch (error: any) {
+    console.error('发送验证码错误:', error)
+    Message.error(error.message || '验证码发送失败，请稍后重试')
+  } finally {
+    resetCodeSending.value = false
+  }
+}
+
+// 处理重置密码
+const handleResetPassword = async () => {
+  // 表单验证
+  if (!resetPasswordForm.email || !resetPasswordForm.code ||
+    !resetPasswordForm.newPassword || !resetPasswordForm.confirmPassword) {
+    resetPasswordErrorMessage.value = '请填写完整的信息'
+    return
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(resetPasswordForm.email)) {
+    resetPasswordErrorMessage.value = '请输入有效的邮箱地址'
+    return
+  }
+
+  if (resetPasswordForm.code.length !== 6) {
+    resetPasswordErrorMessage.value = '请输入6位验证码'
+    return
+  }
+
+  if (resetPasswordForm.newPassword.length < 6) {
+    resetPasswordErrorMessage.value = '密码至少6个字符'
+    return
+  }
+
+  if (resetPasswordForm.newPassword !== resetPasswordForm.confirmPassword) {
+    resetPasswordErrorMessage.value = '两次输入的密码不一致'
+    return
+  }
+
+  loading.value = true
+  resetPasswordErrorMessage.value = ''
+
+  try {
+    const response = await resetPassword({
+      email: resetPasswordForm.email,
+      code: resetPasswordForm.code,
+      newPassword: resetPasswordForm.newPassword
+    })
+
+    if (response.statusCode === 200) {
+      Message.success({
+        content: '密码重置成功！1秒后自动跳转到登录页面',
+        duration: 3000
+      })
+
+      // 清空表单
+      Object.assign(resetPasswordForm, {
+        email: '',
+        code: '',
+        newPassword: '',
+        confirmPassword: ''
+      })
+
+      // 清除倒计时
+      if (resetCountdownTimer) {
+        clearInterval(resetCountdownTimer)
+        resetCountdownTimer = null
+        resetCountdown.value = 0
+      }
+
+      // 延迟返回登录页面
+      setTimeout(() => {
+        translateX.value = -33.333 // 返回登录表单（第2个）
+      }, 1000)
+    } else {
+      resetPasswordErrorMessage.value = '密码重置失败'
+    }
+  } catch (error: any) {
+    console.error('重置密码错误:', error)
+    resetPasswordErrorMessage.value = error.message || '密码重置失败，请稍后重试'
+  } finally {
+    loading.value = false
+  }
 }
 
 watch(loginType, () => {
@@ -456,14 +717,15 @@ watch(loginType, () => {
 // 表单容器 - 类似 2.html 的 form-container
 .form-container {
   display: flex;
-  width: 200%;
+  width: 300%; // 三个表单：忘记密码、登录、注册
   transition: transform 0.5s ease-in-out;
 }
 
-// 登录和注册卡片共同样式
+// 登录、注册和忘记密码卡片共同样式
 .login-card,
-.register-card {
-  width: 50%;
+.register-card,
+.forgot-password-card {
+  width: 33.333%; // 每个占三分之一
   flex-shrink: 0;
   position: relative;
   border-radius: 24px;
@@ -533,6 +795,42 @@ watch(loginType, () => {
 
 .form-group {
   margin-bottom: 20px;
+}
+
+// 密码输入框组合（带显示/隐藏按钮）
+.password-group {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .glass-input {
+    flex: 1;
+    padding-right: 45px; // 为按钮留出空间
+  }
+
+  .toggle-password {
+    position: absolute;
+    right: 12px;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 18px;
+    cursor: pointer;
+    padding: 8px;
+    line-height: 1;
+    transition: all 0.3s ease;
+    z-index: 10;
+
+    &:hover {
+      color: rgba(255, 255, 255, 1);
+      transform: scale(1.1);
+    }
+
+    &:active {
+      transform: scale(0.95);
+    }
+  }
 }
 
 // 验证码组合输入框
@@ -614,6 +912,7 @@ watch(loginType, () => {
   font-size: 1rem;
   backdrop-filter: blur(5px);
   transition: all 0.3s ease;
+  border: 1px solid transparent;
 
   &::placeholder {
     color: rgba(255, 255, 255, 0.7);
@@ -624,6 +923,42 @@ watch(loginType, () => {
     background: rgba(255, 255, 255, 0.2);
     box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
     border-color: rgba(255, 255, 255, 0.3);
+  }
+
+  // 错误状态样式 - 使用青色系与橙红背景形成对比
+  &.input-error {
+    border-color: rgba(34, 211, 238, 0.7);
+    background: rgba(34, 211, 238, 0.1);
+
+    &:focus {
+      border-color: rgba(34, 211, 238, 0.9);
+      box-shadow: 0 0 15px rgba(34, 211, 238, 0.3);
+    }
+  }
+}
+
+// 实时错误提示（显示在输入框下方）- 使用青色系
+.inline-error {
+  color: #60a5fa;
+  font-size: 0.8rem;
+  margin-top: -12px;
+  margin-bottom: 12px;
+  padding: 6px 12px;
+  background: rgba(34, 211, 238, 0.15);
+  border-left: 3px solid #60a5fa;
+  border-radius: 4px;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -658,13 +993,50 @@ watch(loginType, () => {
   }
 }
 
+// 按钮组样式（用于取消和确定按钮）
+.button-group {
+  display: flex;
+  gap: 12px;
+
+  .glass-button {
+    flex: 1;
+  }
+
+  .cancel-button {
+    background: rgba(255, 255, 255, 0.1);
+
+    &:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.2);
+    }
+  }
+}
+
+// 忘记密码链接
+.forgot-password-link {
+  text-align: center;
+  margin-top: 12px;
+  margin-bottom: 12px;
+}
+
+.link-btn {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+  text-decoration: underline;
+
+  &:hover {
+    color: #fff;
+  }
+}
+
 .error-message {
   margin-top: 1rem;
   padding: 8px 12px;
-  background: rgba(220, 53, 69, 0.2);
-  border: 1px solid rgba(220, 53, 69, 0.3);
+  background: rgba(34, 211, 238, 0.2);
+  border: 1px solid rgba(34, 211, 238, 0.4);
   border-radius: 8px;
-  color: #ff6b6b;
+  color: #60a5fa;
   font-size: 0.875rem;
   text-align: center;
   backdrop-filter: blur(5px);
