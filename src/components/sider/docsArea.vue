@@ -8,7 +8,13 @@
     <!-- 文档树 -->
     <a-tree v-else-if="treeData.length > 0" ref="treeRef" v-model:expanded-keys="expandedKeys"
       v-model:selected-keys="selectedKeys" :data="treeData" :load-more="loadMore" @expand="handleExpand"
-      @select="handleNodeSelect" />
+      @select="handleNodeSelect">
+      <!-- 自定义树节点图标和内容 -->
+      <template #icon="{ node }">
+        <img v-if="node.type === 'folder'" :src="folderIcon" class="tree-icon" alt="文件夹" />
+        <img v-else :src="documentIcon" class="tree-icon" alt="文档" />
+      </template>
+    </a-tree>
 
     <!-- 空状态 -->
     <div v-else class="flex flex-col items-center justify-center p-8 text-gray-500">
@@ -24,6 +30,9 @@
 */
 import { ref, onMounted, reactive, toRefs, computed, watch } from 'vue';
 import { getDocumentTree, searchDocuments, loadChildNodes, transformToTreeData } from '@/api/docs'
+// 导入图标
+import folderIcon from '@/assets/文件夹.svg';
+import documentIcon from '@/assets/文章.svg';
 
 // 定义组件发射的事件
 const emit = defineEmits<{
@@ -308,4 +317,19 @@ defineExpose({
 
 </script>
 
-<style scoped></style>
+<style scoped>
+/* 树节点图标样式 */
+.tree-icon {
+  width: 18px;
+  height: 18px;
+  margin-right: 6px;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+/* 确保树节点内容对齐 */
+:deep(.arco-tree-node-title) {
+  display: flex;
+  align-items: center;
+}
+</style>

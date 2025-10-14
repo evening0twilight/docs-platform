@@ -51,13 +51,13 @@
       <DocsArea ref="docsArea" @document-click="handleDocumentClick" />
     </div>
     <!-- 历史记录 -->
-    <div class="w-full h-[50px] flex justify-center items-center px-[10px] py-[1px] flex-shrink-0">
+    <!-- <div class="w-full h-[50px] flex justify-center items-center px-[10px] py-[1px] flex-shrink-0">
       <div class=" w-4/5 h-4/5 rounded-lg border-solid border border-black flex items-center justify-center z-[5px]"
         @click="changeDiolog">
         历史记录
       </div>
-    </div>
-    <HistoryDiolog ref="historyDialog" />
+    </div> -->
+    <!-- <HistoryDiolog ref="historyDialog" /> -->
     <SettingInfo ref="settingInfo" />
     <AddDocs ref="addDocs" :title="title" :selected="selected" @created="handleItemCreated" />
   </div>
@@ -147,9 +147,9 @@ const handleDocumentClick = (doc: any) => {
 };
 
 // 历史记录弹窗
-const changeDiolog = () => {
-  historyDialog.value?.openDiolog();
-};
+// const changeDiolog = () => {
+//   historyDialog.value?.openDiolog();
+// };
 
 // 个人信息弹窗
 const openUserSettingDialog = () => {

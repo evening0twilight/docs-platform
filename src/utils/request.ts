@@ -68,9 +68,15 @@ request.interceptors.response.use(
       if (data && typeof data === 'object') {
         // 检查后端返回的 statusCode 字段（优先级最高）
         if (data.statusCode !== undefined) {
-          // 后端使用 statusCode 字段，直接返回完整数据
           if (data.statusCode === 200 || data.statusCode === 201) {
-            return data // 返回完整的响应数据，包含 statusCode, message, data 等
+            // 智能返回策略：
+            // 1. 如果有 data 字段且不为空对象，返回 data 的内容（如登录接口）
+            // 2. 如果没有 data 字段或 data 为空，返回完整响应（如验证码接口）
+            if (data.data !== undefined && data.data !== null && Object.keys(data.data).length > 0) {
+              return data.data // 返回 data 字段的内容
+            } else {
+              return data // 返回完整数据
+            }
           } else {
             // 业务错误
             const errorMessage = data.message || '请求失败'

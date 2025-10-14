@@ -314,20 +314,17 @@ const sendCode = async () => {
       type: 'register'
     })
 
-    if (response.statusCode === 200) {
-      Message.success(response.data.message || '验证码已发送')
-      // 开始倒计时
-      countdown.value = 60
-      countdownTimer = window.setInterval(() => {
-        countdown.value--
-        if (countdown.value <= 0 && countdownTimer) {
-          clearInterval(countdownTimer)
-          countdownTimer = null
-        }
-      }, 1000)
-    } else {
-      Message.error('验证码发送失败')
-    }
+    // 响应拦截器已经处理了 statusCode，能执行到这里说明成功了
+    Message.success(response.message || '验证码已发送')
+    // 开始倒计时
+    countdown.value = 60
+    countdownTimer = window.setInterval(() => {
+      countdown.value--
+      if (countdown.value <= 0 && countdownTimer) {
+        clearInterval(countdownTimer)
+        countdownTimer = null
+      }
+    }, 1000)
   } catch (error: any) {
     console.error('发送验证码错误:', error)
     Message.error(error.message || '验证码发送失败，请稍后重试')
@@ -532,20 +529,17 @@ const sendResetCode = async () => {
       type: 'reset_password'
     })
 
-    if (response.statusCode === 200) {
-      Message.success(response.data.message || '验证码已发送')
-      // 开始倒计时
-      resetCountdown.value = 60
-      resetCountdownTimer = window.setInterval(() => {
-        resetCountdown.value--
-        if (resetCountdown.value <= 0 && resetCountdownTimer) {
-          clearInterval(resetCountdownTimer)
-          resetCountdownTimer = null
-        }
-      }, 1000)
-    } else {
-      Message.error('验证码发送失败')
-    }
+    // 响应拦截器已经处理了 statusCode，能执行到这里说明成功了
+    Message.success(response.message || '验证码已发送')
+    // 开始倒计时
+    resetCountdown.value = 60
+    resetCountdownTimer = window.setInterval(() => {
+      resetCountdown.value--
+      if (resetCountdown.value <= 0 && resetCountdownTimer) {
+        clearInterval(resetCountdownTimer)
+        resetCountdownTimer = null
+      }
+    }, 1000)
   } catch (error: any) {
     console.error('发送验证码错误:', error)
     Message.error(error.message || '验证码发送失败，请稍后重试')
@@ -594,34 +588,31 @@ const handleResetPassword = async () => {
       newPassword: resetPasswordForm.newPassword
     })
 
-    if (response.statusCode === 200) {
-      Message.success({
-        content: '密码重置成功！1秒后自动跳转到登录页面',
-        duration: 3000
-      })
+    // 响应拦截器已经处理了 statusCode，能执行到这里说明成功了
+    Message.success({
+      content: '密码重置成功！1秒后自动跳转到登录页面',
+      duration: 3000
+    })
 
-      // 清空表单
-      Object.assign(resetPasswordForm, {
-        email: '',
-        code: '',
-        newPassword: '',
-        confirmPassword: ''
-      })
+    // 清空表单
+    Object.assign(resetPasswordForm, {
+      email: '',
+      code: '',
+      newPassword: '',
+      confirmPassword: ''
+    })
 
-      // 清除倒计时
-      if (resetCountdownTimer) {
-        clearInterval(resetCountdownTimer)
-        resetCountdownTimer = null
-        resetCountdown.value = 0
-      }
-
-      // 延迟返回登录页面
-      setTimeout(() => {
-        translateX.value = -33.333 // 返回登录表单（第2个）
-      }, 1000)
-    } else {
-      resetPasswordErrorMessage.value = '密码重置失败'
+    // 清除倒计时
+    if (resetCountdownTimer) {
+      clearInterval(resetCountdownTimer)
+      resetCountdownTimer = null
+      resetCountdown.value = 0
     }
+
+    // 延迟返回登录页面
+    setTimeout(() => {
+      translateX.value = -33.333 // 返回登录表单（第2个）
+    }, 1000)
   } catch (error: any) {
     console.error('重置密码错误:', error)
     resetPasswordErrorMessage.value = error.message || '密码重置失败，请稍后重试'
