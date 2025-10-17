@@ -39,7 +39,7 @@ jobs:
         run: pnpm run build
         env:
           NODE_ENV: production
-          VITE_API_BASE_URL: https://onespecial.me/api
+          VITE_API_BASE_URL: /api
 
       # 6. 创建部署包
       - name: Create deployment archive
