@@ -1,0 +1,134 @@
+name: Deploy to Production
+
+# 触发条件：推送到 dev-pzj 分支
+on:
+  push:
+    branches:
+      - dev-pzj
+  workflow_dispatch: # 允许手动触发
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. 检出代码
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2. 安装 pnpm
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10
+
+      # 3. 设置 Node.js 环境
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'pnpm'
+
+      # 4. 安装依赖
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 5. 构建项目
+      - name: Build project
+        run: pnpm run build
+        env:
+          NODE_ENV: production
+          VITE_API_BASE_URL: /api
+
+      # 6. 创建部署包
+      - name: Create deployment archive
+        run: |
+          cd dist
+          tar -czf ../deploy.tar.gz .
+          cd ..
+
+      # 7. 部署到服务器
+      - name: Deploy to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          source: "deploy.tar.gz"
+          target: "/tmp/"
+
+      # 8. 解压并移动文件到部署目录
+      - name: Extract and move files
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: |
+            # 创建备份
+            if [ -d "${{ secrets.DEPLOY_PATH }}" ]; then
+              echo "Creating backup..."
+              sudo rm -rf ${{ secrets.DEPLOY_PATH }}.backup
+              sudo cp -r ${{ secrets.DEPLOY_PATH }} ${{ secrets.DEPLOY_PATH }}.backup
+            fi
+            
+            # 创建部署目录
+            sudo mkdir -p ${{ secrets.DEPLOY_PATH }}
+            
+            # 清空当前部署目录
+            sudo rm -rf ${{ secrets.DEPLOY_PATH }}/*
+            
+            # 解压新文件
+            cd ${{ secrets.DEPLOY_PATH }}
+            sudo tar -xzf /tmp/deploy.tar.gz
+            
+            # 清理临时文件
+            rm -f /tmp/deploy.tar.gz
+            
+            # 设置权限
+            sudo chown -R www-data:www-data ${{ secrets.DEPLOY_PATH }}
+            sudo chmod -R 755 ${{ secrets.DEPLOY_PATH }}
+            
+            # 重启 Nginx
+            sudo systemctl reload nginx
+            
+            echo "Deployment completed successfully!"
+
+      # 9. 验证部署
+      - name: Verify deployment
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: |
+            # 检查文件是否存在
+            if [ -f "${{ secrets.DEPLOY_PATH }}/index.html" ]; then
+              echo "✅ Deployment verified: index.html exists"
+              ls -lh ${{ secrets.DEPLOY_PATH }}/index.html
+            else
+              echo "❌ Deployment failed: index.html not found"
+              exit 1
+            fi
+            
+            # 检查 Nginx 状态
+            if sudo systemctl is-active --quiet nginx; then
+              echo "✅ Nginx is running"
+            else
+              echo "❌ Nginx is not running"
+              exit 1
+            fi
+
+      # 10. 发送通知（可选）
+      - name: Deployment notification
+        if: always()
+        run: |
+          if [ "${{ job.status }}" == "success" ]; then
+            echo "🎉 Deployment to onespecial.me succeeded!"
+          else
+            echo "❌ Deployment to onespecial.me failed!"
+          fi

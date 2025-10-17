@@ -1,4 +1,4 @@
-import { UserInfo } from '@/components/type';
+import type { UserInfo } from '@/components/type';
 
 // 初始模拟数据
 export const mockUserData: UserInfo = {
