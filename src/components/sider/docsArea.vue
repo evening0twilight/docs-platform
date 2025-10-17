@@ -320,11 +320,12 @@ defineExpose({
 <style scoped>
 /* 树节点图标样式 */
 .tree-icon {
-  width: 18px;
-  height: 18px;
+  width: 18px !important;
+  height: 18px !important;
   margin-right: 6px;
   vertical-align: middle;
   flex-shrink: 0;
+  object-fit: contain;
 }
 
 /* 确保树节点内容对齐 */
