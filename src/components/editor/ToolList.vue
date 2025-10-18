@@ -32,28 +32,28 @@
     </div>
     <!-- 下划线 -->
     <div
-      :class="{ 'is-active': editor?.isActive('underline') }"
+      :class="getButtonClass('underline')"
       @click="editor?.chain().focus().toggleUnderline().run()"
     >
       <img :src="underline" alt="下划线">
     </div>
     <!-- 文字横线（罢工） -->
     <div
-      :class="{ 'is-active': editor?.isActive('strike') }"
+      :class="getButtonClass('strike')"
       @click="editor?.chain().focus().toggleStrike().run()"
     >
       <img :src="hengxian" alt="文字横线（罢工）">
     </div>
     <!-- 加粗 -->
     <div
-      :class="{ 'is-active': editor?.isActive('bold') }"
+      :class="getButtonClass('bold')"
       @click="editor?.chain().focus().toggleBold().run()"
     >
       <img :src="strong" alt="加粗">
     </div>
     <!-- 斜体 -->
     <div
-      :class="{ 'is-active': editor?.isActive('italic') }"
+      :class="getButtonClass('italic')"
       @click="editor?.chain().focus().toggleItalic().run()"
     >
       <img :src="xieti" alt="斜体">
@@ -102,9 +102,13 @@
 
 <script setup lang="ts">
 /**
-* @description 
+* @description 富文本编辑器工具栏
+* 支持三态显示：
+* - 完全激活：选区内所有文本都有该样式
+* - 部分激活：选区内部分文本有该样式（半透明显示）
+* - 未激活：选区内没有该样式
 */
-import { ref, onMounted, reactive, toRefs } from 'vue';
+import { ref, onMounted, reactive, toRefs, computed } from 'vue';
 import type { Editor } from '@tiptap/vue-3';
 import Highlight from '@tiptap/extension-highlight'
 import Superscript from '@tiptap/extension-superscript'
@@ -128,6 +132,68 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+/**
+ * 检查样式在选区中的状态
+ * @param markType - 样式类型（如 'bold', 'italic'）
+ * @returns 'full' | 'partial' | 'none'
+ */
+const getMarkState = (markType: string) => {
+  if (!props.editor) return 'none';
+  
+  const { from, to } = props.editor.state.selection;
+  
+  // 如果选区为空（光标位置），使用默认的 isActive
+  if (from === to) {
+    return props.editor.isActive(markType) ? 'full' : 'none';
+  }
+  
+  let hasStyle = false;
+  let hasNoStyle = false;
+  
+  props.editor.state.doc.nodesBetween(from, to, (node, pos) => {
+    if (node.isText) {
+      // 计算当前文本节点在选区中的范围
+      const nodeStart = Math.max(from, pos);
+      const nodeEnd = Math.min(to, pos + node.nodeSize);
+      
+      if (nodeStart < nodeEnd) {
+        // 检查这段文本是否有该样式
+        const hasMark = node.marks.some(mark => mark.type.name === markType);
+        if (hasMark) {
+          hasStyle = true;
+        } else {
+          hasNoStyle = true;
+        }
+      }
+    }
+  });
+  
+  if (hasStyle && !hasNoStyle) return 'full';      // 全部有
+  if (hasStyle && hasNoStyle) return 'partial';    // 部分有
+  return 'none';                                    // 全部没有
+};
+
+/**
+ * 获取按钮的 class（支持三态）
+ */
+const getButtonClass = (markType: string, options?: any) => {
+  // 对于 heading 等需要参数的，仍使用 isActive
+  if (options) {
+    const isActive = props.editor?.isActive(markType, options);
+    return {
+      'is-active': isActive,
+    };
+  }
+  
+  // 对于 bold、italic、underline 等样式，使用三态检测
+  const state = getMarkState(markType);
+  
+  return {
+    'is-active': state === 'full',
+    'is-partial': state === 'partial',
+  };
+};
 
 // interface State {
 //   : any
@@ -158,9 +224,37 @@ const props = defineProps<Props>();
   flex-shrink: 0;
 }
 
+.toolContainer > div {
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.toolContainer > div:hover {
+  background-color: #f0f0f0;
+}
+
+/* 完全激活状态 - 选区内所有文本都有该样式 */
+.toolContainer > div.is-active {
+  background-color: #1890ff;
+  border: 1px solid #1890ff;
+}
+
+.toolContainer > div.is-active img {
+  filter: brightness(0) invert(1); /* 图标变白色 */
+}
+
+/* 部分激活状态 - 选区内部分文本有该样式 */
+.toolContainer > div.is-partial {
+  background-color: #e6f4ff;
+  border: 1px solid #91caff;
+}
+
 img {
   width: 20px;
   height: 20px;
   cursor: pointer;
+  display: block;
 }
 </style>

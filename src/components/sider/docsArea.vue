@@ -61,7 +61,7 @@ const {
 const handleSearch = async (value: string) => {
   // 更新搜索值
   searchValue.value = value;
-  
+
   if (!value.trim()) {
     // 如果搜索为空，重新获取所有文档
     await fetchDocuments()
@@ -73,18 +73,18 @@ const handleSearch = async (value: string) => {
   try {
     loading.value = true
     console.log('搜索关键词:', value)
-    
+
     // 先获取完整的文档树
     const allDocuments = await getDocumentTree()
     console.log('完整文档树:', allDocuments)
-    
+
     // 将完整树数据转换格式
     const fullTreeData = allDocuments.map(transformToTreeData)
     console.log('转换后的完整树数据:', fullTreeData)
-    
+
     // 使用本地过滤来保持完整的层次结构
     rawData.value = fullTreeData
-    
+
     // 搜索完成后，自动展开所有包含搜索结果的父节点路径
     setTimeout(() => {
       const keysToExpand = findParentKeysForMatches(fullTreeData, value);
@@ -101,7 +101,7 @@ const handleSearch = async (value: string) => {
       const tree = await getDocumentTree()
       const flatData = flattenTree(tree.map(transformToTreeData))
       rawData.value = flatData.filter(item => item.title.includes(value))
-      
+
       // 本地过滤后也要展开匹配节点的父路径
       setTimeout(() => {
         const keysToExpand = findParentKeysForMatches(rawData.value, value);
@@ -109,7 +109,7 @@ const handleSearch = async (value: string) => {
         console.log('本地过滤需要展开的节点keys:', keysToExpand);
         expandedKeys.value = keysToExpand;
       }, 200);
-      
+
     } catch (filterError) {
       console.error('本地过滤也失败:', filterError)
       rawData.value = []
@@ -257,12 +257,12 @@ const flattenTree = (nodes) => {
 // 查找包含匹配节点的所有父节点路径
 const findParentKeysForMatches = (nodes: any[], keyword: string): string[] => {
   const parentKeys = new Set<string>();
-  
+
   // 递归函数，返回当前节点路径上是否包含匹配项
   const traverseNode = (node: any, parentPath: string[] = []): boolean => {
     const currentPath = [...parentPath, node.key];
     let hasMatchInSubtree = false;
-    
+
     // 检查当前节点是否匹配 - 修复：使用正确的字段名
     if (node.title && node.title.includes(keyword)) {
       hasMatchInSubtree = true;
@@ -270,7 +270,7 @@ const findParentKeysForMatches = (nodes: any[], keyword: string): string[] => {
       // 将当前路径上的所有父节点添加到展开列表
       parentPath.forEach(parentKey => parentKeys.add(parentKey));
     }
-    
+
     // 递归检查子节点
     if (node.children && Array.isArray(node.children)) {
       node.children.forEach((child: any) => {
@@ -279,19 +279,19 @@ const findParentKeysForMatches = (nodes: any[], keyword: string): string[] => {
         }
       });
     }
-    
+
     // 如果子树中有匹配项，展开当前节点
     if (hasMatchInSubtree && node.children && node.children.length > 0) {
       console.log(`展开父节点: ${node.title}, key: ${node.key}`);
       parentKeys.add(node.key);
     }
-    
+
     return hasMatchInSubtree;
   };
-  
+
   // 遍历所有根节点
   nodes.forEach(node => traverseNode(node));
-  
+
   console.log('最终展开的节点keys:', Array.from(parentKeys));
   return Array.from(parentKeys);
 };
