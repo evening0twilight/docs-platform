@@ -122,6 +122,10 @@ const editor = useEditor({
   onUpdate: ({ editor }) => {
     // 内容变化时的处理
     handleContentChange()
+  },
+  onSelectionUpdate: ({ editor }) => {
+    // 选区变化时强制更新（触发工具栏响应式更新）
+    // Vue 会自动检测到 editor 的状态变化
   }
 })
 
