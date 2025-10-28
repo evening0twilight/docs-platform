@@ -45,6 +45,40 @@ export const useUserStore = defineStore('user', {
       if (user.avatar !== undefined) this.avatar = user.avatar
       if (user.roles !== undefined) this.roles = user.roles
       if (user.isLoggedIn !== undefined) this.isLoggedIn = user.isLoggedIn
+      
+      // 保存到本地存储
+      this.saveToLocalStorage()
+    },
+    
+    // 保存到本地存储
+    saveToLocalStorage() {
+      const userState = {
+        token: this.token,
+        name: this.name,
+        email: this.email,
+        avatar: this.avatar,
+        roles: this.roles,
+        isLoggedIn: this.isLoggedIn
+      }
+      localStorage.setItem('user-store', JSON.stringify(userState))
+    },
+    
+    // 从本地存储加载
+    loadFromLocalStorage() {
+      const stored = localStorage.getItem('user-store')
+      if (stored) {
+        try {
+          const userState = JSON.parse(stored)
+          this.token = userState.token || ''
+          this.name = userState.name || ''
+          this.email = userState.email || ''
+          this.avatar = userState.avatar || ''
+          this.roles = userState.roles || []
+          this.isLoggedIn = userState.isLoggedIn || false
+        } catch (error) {
+          console.error('加载用户信息失败:', error)
+        }
+      }
     },
     
     // 设置token
@@ -152,15 +186,17 @@ export const useUserStore = defineStore('user', {
       
       // 清除本地存储
       localStorage.removeItem('token')
+      localStorage.removeItem('user-store')
       sessionStorage.removeItem('token')
     },
     
     // 初始化用户状态（从本地存储恢复）
     initUserState() {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-      if (token) {
-        this.setToken(token)
-        // 如果有token，尝试获取用户信息
+      // 先从本地存储加载用户信息
+      this.loadFromLocalStorage()
+      
+      // 如果有token，尝试获取最新的用户信息
+      if (this.token) {
         this.fetchUserInfo()
       }
     }
