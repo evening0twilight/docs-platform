@@ -74,7 +74,34 @@ export const resetPassword = async (data: ResetPasswordRequest): Promise<ResetPa
     const response = await http.post<ResetPasswordResponse>('/users/reset-password', data);
     return response;
   } catch (error) {
-    console.error('重置密码失败:', error);
+    console.error('修改密码失败:', error);
+    throw error;
+  }
+};
+
+// 更换邮箱API请求类型
+interface ChangeEmailRequest {
+  newEmail: string;
+  code: string;
+}
+
+// 更换邮箱API响应类型
+interface ChangeEmailResponse {
+  statusCode: number;
+  message: string;
+  data: {
+    message: string;
+  };
+  timestamp: string;
+}
+
+// 更换邮箱API
+export const changeEmail = async (emailData: ChangeEmailRequest): Promise<ChangeEmailResponse> => {
+  try {
+    const response = await http.post<ChangeEmailResponse>('/users/email', emailData);
+    return response;
+  } catch (error) {
+    console.error('更换邮箱失败:', error);
     throw error;
   }
 };
