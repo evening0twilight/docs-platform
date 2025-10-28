@@ -1,5 +1,5 @@
 <template>
-  <div class="sidebarContainer w-full h-full flex flex-col gap-[20px] px-[20px] py-[10px] bg-[#00FFFF]">
+  <div class="sidebarContainer w-full h-full flex flex-col gap-[20px] px-[20px] py-[10px]">
     <!-- logo+用户信息 -->
     <div class="flex items-center justify-between h-[50px] flex-shrink-0">
       <!-- logo -->
@@ -219,4 +219,24 @@ const handleClearSearch = () => {
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+.sidebarContainer {
+  background: linear-gradient(135deg, #ff7d00 0%, #ffb347 50%, #ff9500 100%);
+  background-size: 200% 200%;
+  animation: gradientShift 15s ease infinite;
+}
+
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0% 50%;
+  }
+}
+</style>
