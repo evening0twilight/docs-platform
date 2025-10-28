@@ -27,7 +27,7 @@ interface RefreshTokenRequest {
 // 发送邮箱验证码请求类型
 interface SendVerificationCodeRequest {
   email: string;
-  type: 'register' | 'reset_password';
+  type: 'register' | 'reset_password' | 'change_email';
 }
 
 // 发送邮箱验证码响应类型
