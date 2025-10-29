@@ -1,12 +1,6 @@
 <template>
   <teleport to="body">
-    <a-modal 
-      v-model:visible="visible" 
-      :width="560" 
-      :mask-closable="false" 
-      :esc-to-close="false"
-      @cancel="closeDialog"
-    >
+    <a-modal v-model:visible="visible" :width="560" :mask-closable="false" :esc-to-close="false" @cancel="closeDialog">
       <template #title>
         <div class="modal-title">
           <div class="title-icon">👤</div>
@@ -18,11 +12,9 @@
         <!-- 用户头像 -->
         <div class="avatar-section">
           <div class="avatar-wrapper">
-            <a-avatar 
-              :imageUrl="userStore.avatar || 'https://p1-arco.byteimg.com/tos-cn-i-uwbnlip3yd/3ee5f13fb09879ecb5185e440cef6eb9123.png~tplv-uwbnlip3yd-webp.webp'" 
-              :size="80"
-              class="user-avatar"
-            />
+            <a-avatar
+              :imageUrl="userStore.avatar || 'https://p1-arco.byteimg.com/tos-cn-i-uwbnlip3yd/3ee5f13fb09879ecb5185e440cef6eb9123.png~tplv-uwbnlip3yd-webp.webp'"
+              :size="80" class="user-avatar" />
             <div class="avatar-badge">
               <span>✨</span>
             </div>
@@ -36,11 +28,7 @@
               <span class="label-icon">👨‍💼</span>
               <span>用户名</span>
             </span>
-            <button 
-              v-if="!isEditingUsername" 
-              class="edit-btn" 
-              @click="startEditUsername"
-            >
+            <button v-if="!isEditingUsername" class="edit-btn" @click="startEditUsername">
               <span>✏️ 编辑</span>
             </button>
           </div>
@@ -49,12 +37,7 @@
               {{ username || '未设置' }}
             </div>
             <div v-else class="info-edit">
-              <a-input 
-                v-model="username"
-                placeholder="请输入用户名"
-                allow-clear
-                class="custom-input"
-              />
+              <a-input v-model="username" placeholder="请输入用户名" allow-clear class="custom-input" />
               <div class="edit-actions">
                 <button class="action-btn cancel" @click="cancelEditUsername">取消</button>
                 <button class="action-btn save" @click="saveUsername">保存</button>
@@ -70,11 +53,7 @@
               <span class="label-icon">📧</span>
               <span>邮箱</span>
             </span>
-            <button 
-              v-if="!isEditingEmail" 
-              class="edit-btn" 
-              @click="startEditEmail"
-            >
+            <button v-if="!isEditingEmail" class="edit-btn" @click="startEditEmail">
               <span>✏️ 编辑</span>
             </button>
           </div>
@@ -83,12 +62,7 @@
               {{ email || '未设置' }}
             </div>
             <div v-else class="info-edit">
-              <a-input 
-                v-model="email"
-                placeholder="请输入邮箱"
-                allow-clear
-                class="custom-input"
-              />
+              <a-input v-model="email" placeholder="请输入邮箱" allow-clear class="custom-input" />
               <div class="edit-actions">
                 <button class="action-btn cancel" @click="cancelEditEmail">取消</button>
                 <button class="action-btn save" @click="saveEmail">保存</button>
@@ -367,8 +341,15 @@ defineExpose({
 }
 
 @keyframes bounce {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-5px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
 }
 
 /* 信息项 */
@@ -613,4 +594,5 @@ defineExpose({
   padding: 0 24px 24px !important;
   border-top: none !important;
 }
-</style><style scoped></style>
+</style>
+<style scoped></style>

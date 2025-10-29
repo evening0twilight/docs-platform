@@ -1,13 +1,7 @@
 <template>
   <teleport to="body">
-    <a-modal 
-      v-model:visible="visible" 
-      :width="480" 
-      :mask-closable="false" 
-      :esc-to-close="false"
-      :modal-class="'custom-password-modal'"
-      @cancel="closeDialog"
-    >
+    <a-modal v-model:visible="visible" :width="480" :mask-closable="false" :esc-to-close="false"
+      :modal-class="'custom-password-modal'" @cancel="closeDialog">
       <template #title>
         <div class="modal-title">
           <div class="title-icon">🔐</div>
@@ -21,12 +15,7 @@
             <span class="label-icon">🔑</span>
             <span>当前密码</span>
           </div>
-          <a-input-password 
-            placeholder="请输入当前密码" 
-            v-model="currentPassword"
-            allow-clear
-            class="custom-input"
-          />
+          <a-input-password placeholder="请输入当前密码" v-model="currentPassword" allow-clear class="custom-input" />
         </div>
 
         <div class="form-item">
@@ -34,12 +23,7 @@
             <span class="label-icon">✨</span>
             <span>新密码</span>
           </div>
-          <a-input-password 
-            placeholder="请输入新密码（至少6位）" 
-            v-model="newPassword"
-            allow-clear
-            class="custom-input"
-          />
+          <a-input-password placeholder="请输入新密码（至少6位）" v-model="newPassword" allow-clear class="custom-input" />
           <div class="password-strength">
             <div class="strength-bar">
               <div class="strength-fill" :style="{ width: passwordStrength + '%', background: strengthColor }"></div>
@@ -53,12 +37,7 @@
             <span class="label-icon">✅</span>
             <span>确认新密码</span>
           </div>
-          <a-input-password 
-            placeholder="请再次输入新密码" 
-            v-model="confirmPassword"
-            allow-clear
-            class="custom-input"
-          />
+          <a-input-password placeholder="请再次输入新密码" v-model="confirmPassword" allow-clear class="custom-input" />
         </div>
       </div>
 
@@ -112,7 +91,7 @@ const loading = ref(false);
 const passwordStrength = computed(() => {
   const pwd = newPassword.value;
   if (!pwd) return 0;
-  
+
   let strength = 0;
   // 长度
   if (pwd.length >= 6) strength += 25;
@@ -121,7 +100,7 @@ const passwordStrength = computed(() => {
   if (/\d/.test(pwd)) strength += 25;
   // 包含字母
   if (/[a-zA-Z]/.test(pwd)) strength += 25;
-  
+
   return strength;
 });
 
@@ -159,34 +138,34 @@ const handleChangePassword = async () => {
       Message.warning('请输入当前密码');
       return;
     }
-    
+
     if (!newPassword.value.trim()) {
       Message.warning('请输入新密码');
       return;
     }
-    
+
     if (newPassword.value.length < 6) {
       Message.warning('新密码长度至少为6位');
       return;
     }
-    
+
     if (!confirmPassword.value.trim()) {
       Message.warning('请确认新密码');
       return;
     }
-    
+
     if (newPassword.value !== confirmPassword.value) {
       Message.warning('两次输入的新密码不一致');
       return;
     }
-    
+
     if (currentPassword.value === newPassword.value) {
       Message.warning('新密码不能与当前密码相同');
       return;
     }
 
     loading.value = true;
-    
+
     // 调用API修改密码
     const response = await changePassword({
       currentPassword: currentPassword.value,
@@ -196,13 +175,13 @@ const handleChangePassword = async () => {
 
     Message.success(response.message || '密码修改成功，请重新登录');
     closeDialog();
-    
+
     // 修改密码成功后，清除token并跳转到登录页
     setTimeout(() => {
       userStore.logout();
       router.push('/login');
     }, 1500); // 延迟1.5秒，让用户看到成功提示
-    
+
     console.log('密码修改成功，即将跳转到登录页');
   } catch (error: any) {
     console.error('修改密码失败', error);
@@ -251,9 +230,19 @@ defineExpose({
 }
 
 @keyframes shake {
-  0%, 100% { transform: rotate(0deg); }
-  25% { transform: rotate(-10deg); }
-  75% { transform: rotate(10deg); }
+
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+
+  25% {
+    transform: rotate(-10deg);
+  }
+
+  75% {
+    transform: rotate(10deg);
+  }
 }
 
 .title-text {
@@ -344,8 +333,13 @@ defineExpose({
 }
 
 @keyframes shimmer {
-  0% { left: -100%; }
-  100% { left: 100%; }
+  0% {
+    left: -100%;
+  }
+
+  100% {
+    left: 100%;
+  }
 }
 
 .strength-text {
