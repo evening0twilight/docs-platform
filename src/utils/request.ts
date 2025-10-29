@@ -31,10 +31,16 @@ request.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`
     }
 
-    // 2. 不再添加时间戳参数（已删除）
+    // 2. 处理 FormData，删除 Content-Type 让浏览器自动设置
+    if (config.data instanceof FormData) {
+      // 删除默认的 Content-Type，让浏览器自动设置为 multipart/form-data 并添加 boundary
+      delete config.headers['Content-Type']
+    }
+
+    // 3. 不再添加时间戳参数（已删除）
     // 如果需要防止缓存，可以在服务端设置Cache-Control头
 
-    // 3. 显示loading（可选）
+    // 4. 显示loading（可选）
     // 可以在这里添加全局loading状态
 
     console.log('请求发送:', config)

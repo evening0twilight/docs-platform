@@ -77,6 +77,7 @@ import addSvg from '@/assets/add.svg';
 import SettingInfo from './sider/diolog/settingInfo.vue'
 import AddDocs from './sider/diolog/addDocs.vue';
 import DocsArea from './sider/docsArea.vue'
+import unImgUrl from '@/assets/头像.svg';
 
 // 获取用户store
 const userStore = useUserStore()
@@ -94,7 +95,6 @@ interface State {
 }
 
 // 没有头像的默认图片
-const unImgUrl = ref<string>("https://p1-arco.byteimg.com/tos-cn-i-uwbnlip3yd/3ee5f13fb09879ecb5185e440cef6eb9123.png~tplv-uwbnlip3yd-webp.webp");
 
 const state = reactive<State>({
   imgUrl: 'https://p1-arco.byteimg.com/tos-cn-i-uwbnlip3yd/3ee5f13fb09879ecb5185e440cef6eb9.png~tplv-uwbnlip3yd-webp.webp',

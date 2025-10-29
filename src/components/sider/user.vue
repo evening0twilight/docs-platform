@@ -4,9 +4,7 @@
     <div class="user-info-card">
       <div class="user-avatar-section">
         <div class="avatar-wrapper">
-          <a-avatar
-            :imageUrl="userInfo.avatar || 'https://p1-arco.byteimg.com/tos-cn-i-uwbnlip3yd/3ee5f13fb09879ecb5185e440cef6eb9123.png~tplv-uwbnlip3yd-webp.webp'"
-            :size="50" class="user-avatar" />
+          <a-avatar :image-url="userInfo.avatar || defaultAvatar" :size="50" class="user-avatar" />
           <div class="avatar-ring"></div>
         </div>
         <div class="user-details">
@@ -49,6 +47,7 @@ import { logoutUser } from '@/api/user';
 import type { UserInfo } from '../type';
 import PersonSvg from '@/assets/personInformation.svg';
 import LogoutSvg from '@/assets/logout.svg';
+import defaultAvatar from '@/assets/头像.svg';
 
 const router = useRouter();
 const userStore = useUserStore();
