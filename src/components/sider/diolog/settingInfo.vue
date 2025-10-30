@@ -11,14 +11,26 @@
       <div class="user-info-container" @click.stop>
         <!-- 用户头像 -->
         <div class="avatar-section">
-          <div class="avatar-wrapper">
-            <a-avatar
-              :imageUrl="userStore.avatar || 'https://p1-arco.byteimg.com/tos-cn-i-uwbnlip3yd/3ee5f13fb09879ecb5185e440cef6eb9123.png~tplv-uwbnlip3yd-webp.webp'"
-              :size="80" class="user-avatar" />
+          <div class="avatar-wrapper" :class="{ 'uploading': uploadingAvatar }">
+            <a-avatar :size="80" :image-url="userStore.avatar || defaultAvatar" class="user-avatar" trigger-type="mask"
+              @click="handleAvatarClick">
+              <template #trigger-icon>
+                <icon-edit v-if="!uploadingAvatar" />
+                <icon-loading v-else />
+              </template>
+            </a-avatar>
             <div class="avatar-badge">
               <span>✨</span>
             </div>
+            <!-- 上传中遮罩 -->
+            <div v-if="uploadingAvatar" class="upload-mask">
+              <div class="upload-spinner"></div>
+              <span class="upload-text">上传中...</span>
+            </div>
           </div>
+          <!-- 隐藏的文件上传输入框 -->
+          <input ref="avatarInput" type="file" accept="image/jpeg,image/jpg,image/png,image/webp,image/gif"
+            style="display: none" @change="handleAvatarChange" :disabled="uploadingAvatar" />
         </div>
 
         <!-- 用户名 -->
@@ -53,20 +65,13 @@
               <span class="label-icon">📧</span>
               <span>邮箱</span>
             </span>
-            <button v-if="!isEditingEmail" class="edit-btn" @click="startEditEmail">
-              <span>✏️ 编辑</span>
+            <button class="edit-btn" @click="openChangeEmailDialog">
+              <span>✏️ 修改</span>
             </button>
           </div>
           <div class="info-content">
-            <div v-if="!isEditingEmail" class="info-display">
+            <div class="info-display">
               {{ email || '未设置' }}
-            </div>
-            <div v-else class="info-edit">
-              <a-input v-model="email" placeholder="请输入邮箱" allow-clear class="custom-input" />
-              <div class="edit-actions">
-                <button class="action-btn cancel" @click="cancelEditEmail">取消</button>
-                <button class="action-btn save" @click="saveEmail">保存</button>
-              </div>
             </div>
           </div>
         </div>
@@ -95,6 +100,9 @@
 
     <!-- 修改密码弹窗 -->
     <ChangePassword ref="changePasswordRef" />
+
+    <!-- 修改邮箱弹窗 -->
+    <ChangeEmail ref="changeEmailRef" />
   </teleport>
 </template>
 
@@ -104,10 +112,14 @@
 */
 import { ref, onMounted, reactive, toRefs, watch } from 'vue';
 import { Message } from '@arco-design/web-vue';
+import { IconEdit, IconLoading } from '@arco-design/web-vue/es/icon';
 import { useUserStore } from '@/store/user';
-import { getUserInfo, updateUserInfo } from '@/api/user';
+import { getUserInfo, updateUserInfo, uploadAvatar } from '@/api/user';
 import type { UserInfo } from '@/components/type';
 import ChangePassword from './changePassword.vue';
+import ChangeEmail from './changeEmail.vue';
+import defaultAvatar from '@/assets/头像.svg';
+import { processAvatarImage } from '@/utils/imageCompress';
 
 const userStore = useUserStore();
 
@@ -129,16 +141,28 @@ const username = ref('');
 const email = ref('');
 const loading = ref(false);
 
+// 头像上传相关
+const avatarInput = ref<HTMLInputElement>();
+const uploadingAvatar = ref(false);
+
 // 编辑状态
 const isEditingUsername = ref(false);
-const isEditingEmail = ref(false);
 
 // 保存原始值，用于取消时恢复
 const originalUsername = ref('');
-const originalEmail = ref('');
 
 // 修改密码弹窗ref
 const changePasswordRef = ref<InstanceType<typeof ChangePassword>>();
+
+// 修改邮箱弹窗ref
+const changeEmailRef = ref<InstanceType<typeof ChangeEmail>>();
+
+// 监听 store 中邮箱的变化，自动更新显示
+watch(() => userStore.email, (newEmail) => {
+  if (visible.value) {
+    email.value = newEmail || '';
+  }
+});
 
 // 打开对话框时从store加载用户信息
 const openDialog = () => {
@@ -147,16 +171,97 @@ const openDialog = () => {
   username.value = userStore.name || '';
   email.value = userStore.email || '';
   originalUsername.value = username.value;
-  originalEmail.value = email.value;
   // 重置编辑状态
   isEditingUsername.value = false;
-  isEditingEmail.value = false;
   console.log('加载用户信息:', username.value, email.value);
 };
 
 // 打开修改密码弹窗
 const openChangePasswordDialog = () => {
   changePasswordRef.value?.openDialog();
+};
+
+// 打开修改邮箱弹窗
+const openChangeEmailDialog = () => {
+  changeEmailRef.value?.openDialog();
+  // 邮箱修改成功后会自动刷新用户信息
+};
+
+// 点击头像触发文件选择
+const handleAvatarClick = () => {
+  if (uploadingAvatar.value) {
+    return; // 上传中时禁止点击
+  }
+  avatarInput.value?.click();
+};
+
+// 处理头像文件变化
+const handleAvatarChange = async (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  const file = target.files?.[0];
+
+  if (!file) return;
+
+  try {
+    uploadingAvatar.value = true;
+    Message.info('正在处理图片...');
+
+    // 1. 验证和压缩图片
+    const processedFile = await processAvatarImage(file);
+
+    Message.info('正在上传头像...');
+
+    // 2. 上传图片到服务器
+    const uploadResponse = await uploadAvatar(processedFile);
+
+    console.log('上传响应:', uploadResponse);
+
+    // 3. 从响应中获取头像 URL
+    // 响应拦截器已经提取了 data.data，所以直接访问 avatar 字段
+    const avatarUrl = uploadResponse.avatar;
+
+    if (!avatarUrl) {
+      console.error('无法获取头像 URL，响应数据:', uploadResponse);
+      throw new Error('服务器未返回头像地址');
+    }
+
+    console.log('头像上传成功，URL:', avatarUrl);
+
+    // 4. 调用更新用户信息接口保存头像
+    Message.info('正在保存头像...');
+    await updateUserInfo({
+      username: username.value,
+      email: email.value,
+      avatar: avatarUrl  // 保存头像 URL
+    });
+
+    // 5. 重新获取用户信息（确保数据同步）
+    const userInfo = await getUserInfo();
+
+    // 6. 更新本地 store
+    userStore.setUser({
+      name: userInfo.name,
+      email: userInfo.email,
+      avatar: userInfo.avatar
+    });
+
+    // 7. 更新本地显示
+    username.value = userInfo.name;
+    email.value = userInfo.email;
+
+    Message.success('头像更新成功！');
+    console.log('用户信息已更新:', userInfo);
+  } catch (error: any) {
+    console.error('上传头像失败:', error);
+    const errorMessage = error?.message || error?.response?.data?.message || '上传头像失败，请稍后重试';
+    Message.error(errorMessage);
+  } finally {
+    uploadingAvatar.value = false;
+    // 清空 input，以便可以重新选择同一文件
+    if (target) {
+      target.value = '';
+    }
+  }
 };
 
 // 开始编辑用户名
@@ -206,55 +311,7 @@ const saveUsername = async () => {
   }
 };
 
-// 开始编辑邮箱
-const startEditEmail = () => {
-  originalEmail.value = email.value;
-  isEditingEmail.value = true;
-};
-
-// 取消编辑邮箱
-const cancelEditEmail = () => {
-  email.value = originalEmail.value;
-  isEditingEmail.value = false;
-};
-
-// 保存邮箱
-const saveEmail = async () => {
-  try {
-    // 验证邮箱格式
-    if (email.value && !isValidEmail(email.value)) {
-      Message.warning('请输入有效的邮箱地址');
-      return;
-    }
-
-    loading.value = true;
-
-    // 调用API更新用户信息
-    await updateUserInfo({
-      username: username.value,
-      email: email.value
-    });
-
-    // 更新store中的用户信息
-    userStore.setUser({
-      name: username.value,
-      email: email.value
-    });
-
-    originalEmail.value = email.value;
-    isEditingEmail.value = false;
-    Message.success('邮箱更新成功');
-    console.log('邮箱更新成功');
-  } catch (error: any) {
-    console.error('更新邮箱失败', error);
-    const errorMessage = error?.response?.data?.message || error?.message || '更新邮箱失败，请稍后重试';
-    Message.error(errorMessage);
-  } finally {
-    loading.value = false;
-  }
-};
-
-// 邮箱验证函数
+// 邮箱验证函数（用于用户名保存时验证）
 const isValidEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   return emailRegex.test(email);
@@ -265,7 +322,6 @@ const closeDialog = () => {
   visible.value = false;
   // 重置编辑状态
   isEditingUsername.value = false;
-  isEditingEmail.value = false;
 };
 
 // 导出方法供外部调用
@@ -319,9 +375,73 @@ defineExpose({
   display: inline-block;
 }
 
+.avatar-wrapper.uploading .user-avatar {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
 .user-avatar {
   border: 4px solid #fff;
   box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.user-avatar:hover {
+  transform: scale(1.05);
+  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.4);
+}
+
+/* 上传中遮罩 */
+.upload-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  z-index: 10;
+}
+
+.upload-spinner {
+  width: 30px;
+  height: 30px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.upload-text {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #667eea;
+  font-weight: 500;
+}
+
+/* 头像遮罩层样式 */
+.user-avatar :deep(.arco-avatar-trigger-icon-button) {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+.user-avatar :deep(.arco-avatar-trigger-icon-button:hover) {
+  background: rgba(0, 0, 0, 0.7);
 }
 
 .avatar-badge {

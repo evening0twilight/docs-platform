@@ -79,10 +79,31 @@ export const resetPassword = async (data: ResetPasswordRequest): Promise<ResetPa
   }
 };
 
+// 上传头像API响应类型（响应拦截器会提取 data.data）
+interface UploadAvatarResponse {
+  avatar: string;  // 响应拦截器返回的是 data.data 的内容
+}
+
+// 上传头像API
+export const uploadAvatar = async (file: File): Promise<UploadAvatarResponse> => {
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // 请求拦截器会自动处理 FormData，删除 Content-Type 让浏览器自动设置
+    const response = await http.post<UploadAvatarResponse>('/users/avatar', formData);
+    return response;
+  } catch (error) {
+    console.error('上传头像失败:', error);
+    throw error;
+  }
+};
+
 // 更换邮箱API请求类型
 interface ChangeEmailRequest {
-  newEmail: string;
-  code: string;
+  currentPassword: string;  // 当前密码
+  newEmail: string;         // 新邮箱
+  code: string;             // 验证码
 }
 
 // 更换邮箱API响应类型
@@ -98,7 +119,7 @@ interface ChangeEmailResponse {
 // 更换邮箱API
 export const changeEmail = async (emailData: ChangeEmailRequest): Promise<ChangeEmailResponse> => {
   try {
-    const response = await http.post<ChangeEmailResponse>('/users/email', emailData);
+    const response = await http.put<ChangeEmailResponse>('/users/email', emailData);
     return response;
   } catch (error) {
     console.error('更换邮箱失败:', error);
@@ -169,6 +190,7 @@ export const getUserInfo = async (): Promise<UserInfo> => {
 interface UpdateUserInfoRequest {
   username?: string;
   email?: string;
+  avatar?: string;  // 添加 avatar 字段
 }
 
 // 更新用户信息API
