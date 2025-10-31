@@ -131,8 +131,11 @@ export const useUserStore = defineStore('user', {
           this.setToken(token)
           
           // 设置用户信息
+          // 优先使用 displayName，其次使用 username，最后使用登录时输入的用户名
+          const displayName = userInfo?.displayName || userInfo?.username || loginParams.username
+          
           this.setUser({
-            name: userInfo?.name || loginParams.username,
+            name: displayName,
             email: userInfo?.email || '',
             avatar: userInfo?.avatar || '',
             roles: [], 
@@ -140,6 +143,7 @@ export const useUserStore = defineStore('user', {
           })
           
           console.log('登录成功，token:', token)
+          console.log('用户信息:', { name: displayName, email: userInfo?.email })
           return { success: true, data: response }
         } else {
           throw new Error('未获取到有效的认证信息')
@@ -158,14 +162,19 @@ export const useUserStore = defineStore('user', {
         }
         
         const userInfo: UserInfo = await getUserInfo()
+        
+        // 优先使用 displayName，其次使用 username，最后使用 name（兼容旧版本）
+        const displayName = userInfo.displayName || userInfo.username || userInfo.name || ''
+        
         this.setUser({
-          name: userInfo.name,
+          name: displayName,
           email: userInfo.email || '',
           avatar: userInfo.avatar || '',
           roles: [], // UserInfo没有roles字段，使用默认值
           isLoggedIn: true
         })
         
+        console.log('获取用户信息成功:', { name: displayName, email: userInfo.email })
         return { success: true, data: userInfo }
       } catch (error) {
         console.error('获取用户信息失败:', error)

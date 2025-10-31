@@ -328,9 +328,24 @@ defineExpose({
   object-fit: contain;
 }
 
-/* 确保树节点内容对齐 */
+/* 确保树节点内容对齐和选中态占满一行 */
 :deep(.arco-tree-node-title) {
   display: flex;
   align-items: center;
+  width: 100%;
+  flex: 1;
+}
+
+:deep(.arco-tree-node-title-text) {
+  flex: 1;
+}
+
+/* 选中态样式优化 */
+:deep(.arco-tree-node-selected) {
+  width: 100%;
+}
+
+:deep(.arco-tree-node-selected .arco-tree-node-title) {
+  width: 100%;
 }
 </style>

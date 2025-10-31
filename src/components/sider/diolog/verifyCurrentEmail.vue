@@ -1,52 +1,41 @@
 <template>
   <teleport to="body">
-    <a-modal v-model:visible="visible" :width="520" :mask-closable="false" :esc-to-close="false"
-      :modal-class="'custom-email-modal'" @cancel="closeDialog">
+    <a-modal v-model:visible="visible" :width="480" :mask-closable="false" :esc-to-close="false"
+      :modal-class="'custom-verify-modal'" @cancel="closeDialog">
       <template #title>
         <div class="modal-title">
-          <div class="title-icon">📧</div>
-          <span class="title-text">修改邮箱</span>
+          <div class="title-icon">🔐</div>
+          <span class="title-text">验证当前邮箱</span>
         </div>
       </template>
 
-      <div class="email-form" @click.stop>
-        <!-- 安全提示 -->
-        <div class="security-notice">
-          <div class="notice-icon">⚠️</div>
+      <div class="verify-form" @click.stop>
+        <!-- 提示信息 -->
+        <div class="info-notice">
+          <div class="notice-icon">📧</div>
           <div class="notice-content">
-            <p class="notice-title">重要提示</p>
-            <p class="notice-text">邮箱是您的登录账号，修改成功后将自动退出登录，请使用新邮箱重新登录</p>
+            <p class="notice-title">安全验证</p>
+            <p class="notice-text">为了确保是本人操作，我们将向您的邮箱发送验证码</p>
           </div>
         </div>
 
         <!-- 当前邮箱显示 -->
-        <div class="current-email-display">
+        <div class="email-display">
           <span class="label">当前邮箱：</span>
           <span class="email-text">{{ currentEmail }}</span>
         </div>
 
-        <!-- 新邮箱 -->
-        <div class="form-item">
-          <div class="input-label">
-            <span class="label-icon">✉️</span>
-            <span>新邮箱地址</span>
-            <span class="required-mark">*</span>
-          </div>
-          <a-input placeholder="请输入新的邮箱地址" v-model="newEmail" allow-clear class="custom-input" :disabled="loading" />
-        </div>
-
-        <!-- 新邮箱验证码 -->
+        <!-- 验证码输入 -->
         <div class="form-item">
           <div class="input-label">
             <span class="label-icon">🔢</span>
-            <span>新邮箱验证码</span>
+            <span>验证码</span>
             <span class="required-mark">*</span>
           </div>
           <div class="code-input-wrapper">
             <a-input placeholder="请输入6位验证码" v-model="verificationCode" allow-clear class="custom-input code-input"
-              :max-length="6" :disabled="loading" />
-            <button class="send-code-btn" @click="handleSendCode"
-              :disabled="sendingCode || countdown > 0 || !newEmail || loading">
+              :max-length="6" :disabled="loading" @keyup.enter="handleVerify" />
+            <button class="send-code-btn" @click="handleSendCode" :disabled="sendingCode || countdown > 0 || loading">
               <span v-if="countdown > 0">{{ countdown }}秒后重试</span>
               <span v-else-if="sendingCode">发送中...</span>
               <span v-else>{{ codeSent ? '重新发送' : '发送验证码' }}</span>
@@ -54,19 +43,19 @@
           </div>
           <div v-if="codeSent" class="code-hint">
             <span class="hint-icon">💡</span>
-            <span>验证码已发送至新邮箱，10分钟内有效</span>
+            <span>验证码已发送至您的邮箱，10分钟内有效</span>
           </div>
         </div>
 
-        <!-- 提示信息 -->
+        <!-- 温馨提示 -->
         <div class="tips-section">
           <div class="tip-item">
             <span class="tip-icon">📌</span>
-            <span>修改成功后，系统将向旧邮箱发送变更通知</span>
+            <span>如果未收到验证码，请检查垃圾邮件箱</span>
           </div>
           <div class="tip-item">
             <span class="tip-icon">⏰</span>
-            <span>邮箱修改成功后24小时内不能再次修改</span>
+            <span>验证码10分钟内有效，请尽快完成验证</span>
           </div>
         </div>
       </div>
@@ -76,9 +65,9 @@
           <button class="cancel-btn" @click="closeDialog" :disabled="loading">
             <span>取消</span>
           </button>
-          <button class="confirm-btn" @click="handleChangeEmail" :disabled="loading">
-            <span v-if="!loading">确认修改</span>
-            <span v-else>修改中...</span>
+          <button class="confirm-btn" @click="handleVerify" :disabled="loading">
+            <span v-if="!loading">验证并继续</span>
+            <span v-else>验证中...</span>
           </button>
         </div>
       </template>
@@ -88,15 +77,13 @@
 
 <script setup lang="ts">
 /**
-* @description 修改邮箱弹窗
+* @description 验证当前邮箱弹窗 - 验证当前邮箱所有权
 */
 import { ref, reactive, toRefs, computed } from 'vue';
-import { useRouter } from 'vue-router';
 import { Message } from '@arco-design/web-vue';
 import { useUserStore } from '@/store/user';
-import { changeEmail, sendVerificationCode, getUserInfo } from '@/api/user';
+import { sendVerificationCode, verifyOldEmail } from '@/api/user';
 
-const router = useRouter();
 const userStore = useUserStore();
 
 interface State {
@@ -112,8 +99,7 @@ const {
 } = toRefs(state);
 
 // 表单数据
-const newEmail = ref('');
-const verificationCode = ref(''); // 新邮箱验证码
+const verificationCode = ref('');
 const loading = ref(false);
 
 // 验证码相关
@@ -125,10 +111,24 @@ let countdownTimer: ReturnType<typeof setInterval> | null = null;
 // 当前邮箱
 const currentEmail = computed(() => userStore.email || '未设置');
 
+// 成功回调
+let onVerifySuccess: (() => void) | null = null;
+
 // 打开对话框
-const openDialog = () => {
+const openDialog = (successCallback?: () => void) => {
+  if (!userStore.email) {
+    Message.error('当前未绑定邮箱，无法进行此操作');
+    return;
+  }
+
   visible.value = true;
+  onVerifySuccess = successCallback || null;
   resetForm();
+
+  // 自动发送验证码
+  setTimeout(() => {
+    handleSendCode();
+  }, 300);
 };
 
 // 关闭对话框
@@ -139,12 +139,11 @@ const closeDialog = () => {
   }
   visible.value = false;
   resetForm();
+  onVerifySuccess = null;
 };
 
 // 重置表单
 const resetForm = () => {
-  // oldEmailCode 不重置，因为是从父组件传入的
-  newEmail.value = '';
   verificationCode.value = '';
   loading.value = false;
   sendingCode.value = false;
@@ -156,56 +155,10 @@ const resetForm = () => {
   }
 };
 
-// 表单验证
-const validateForm = (): boolean => {
-  if (!newEmail.value) {
-    Message.warning('请输入新邮箱地址');
-    return false;
-  }
-
-  // 邮箱格式验证
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(newEmail.value)) {
-    Message.warning('请输入有效的邮箱地址');
-    return false;
-  }
-
-  // 检查是否与当前邮箱相同
-  if (newEmail.value === currentEmail.value) {
-    Message.warning('新邮箱不能与当前邮箱相同');
-    return false;
-  }
-
-  if (!verificationCode.value) {
-    Message.warning('请输入验证码');
-    return false;
-  }
-
-  if (verificationCode.value.length !== 6) {
-    Message.warning('验证码为6位数字');
-    return false;
-  }
-
-  return true;
-};
-
 // 发送验证码
 const handleSendCode = async () => {
-  if (!newEmail.value) {
-    Message.warning('请先输入新邮箱地址');
-    return;
-  }
-
-  // 邮箱格式验证
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(newEmail.value)) {
-    Message.warning('请输入有效的邮箱地址');
-    return;
-  }
-
-  // 检查是否与当前邮箱相同
-  if (newEmail.value === currentEmail.value) {
-    Message.warning('新邮箱不能与当前邮箱相同');
+  if (!currentEmail.value || currentEmail.value === '未设置') {
+    Message.error('当前未绑定邮箱');
     return;
   }
 
@@ -213,8 +166,8 @@ const handleSendCode = async () => {
     sendingCode.value = true;
 
     await sendVerificationCode({
-      email: newEmail.value,
-      type: 'change_email'
+      email: currentEmail.value,
+      type: 'change_email'  // 使用统一的 change_email 类型
     });
 
     Message.success('验证码已发送，请查收邮件');
@@ -249,43 +202,49 @@ const handleSendCode = async () => {
   }
 };
 
-// 修改邮箱
-const handleChangeEmail = async () => {
-  if (!validateForm()) {
+// 验证并继续（调用后端验证接口）
+const handleVerify = async () => {
+  if (!verificationCode.value) {
+    Message.warning('请输入验证码');
+    return;
+  }
+
+  if (verificationCode.value.length !== 6) {
+    Message.warning('验证码为6位数字');
+    return;
+  }
+
+  if (!currentEmail.value || currentEmail.value === '未设置') {
+    Message.error('当前未绑定邮箱');
     return;
   }
 
   try {
     loading.value = true;
-    Message.info('正在修改邮箱...');
 
-    // 调用修改邮箱接口
-    const response = await changeEmail({
-      newEmail: newEmail.value,
-      newEmailCode: verificationCode.value
+    // 调用后端验证接口（需要传递 email 和 code）
+    const response = await verifyOldEmail({
+      email: currentEmail.value,
+      code: verificationCode.value
     });
 
-    console.log('邮箱修改响应:', response);
-
-    Message.success('邮箱修改成功！已向旧邮箱发送通知，请使用新邮箱重新登录');
-    console.log('邮箱修改成功');
+    console.log('当前邮箱验证成功:', response);
+    Message.success('当前邮箱验证通过，请继续输入新邮箱');
 
     // 关闭对话框
-    closeDialog();
+    visible.value = false;
 
-    // 延迟1.5秒后退出登录
-    setTimeout(() => {
-      // 调用 logout 清除所有用户信息
-      userStore.logout();
+    // 调用成功回调
+    if (onVerifySuccess) {
+      setTimeout(() => {
+        onVerifySuccess?.();
+      }, 300);
+    }
 
-      // 跳转到登录页
-      router.push('/login');
-
-      Message.info('请使用新邮箱登录');
-    }, 1500);
+    resetForm();
 
   } catch (error: any) {
-    console.error('修改邮箱失败:', error);
+    console.error('验证失败:', error);
 
     const status = error?.response?.status;
     const errorData = error?.response?.data;
@@ -293,34 +252,24 @@ const handleChangeEmail = async () => {
 
     // 处理特定错误
     if (status === 400) {
-      // 各种 400 错误
-      if (message.includes('请先验证当前邮箱')) {
-        Message.error('请先验证当前邮箱');
-        closeDialog(); // 关闭当前对话框，让用户重新开始
-      } else if (message.includes('当前邮箱验证已过期')) {
-        Message.error('当前邮箱验证已过期（超过10分钟），请重新验证');
-        closeDialog(); // 关闭当前对话框
-      } else if (message.includes('新邮箱验证码')) {
-        Message.error(message || '新邮箱验证码错误或已过期');
-      } else if (message.includes('尝试次数')) {
-        Message.error('验证码尝试次数已达上限，请重新获取验证码');
-      } else if (message.includes('相同')) {
-        Message.error('新邮箱不能与当前邮箱相同');
+      // 验证码错误、已过期、邮箱不一致等
+      if (message.includes('还剩')) {
+        // 显示剩余尝试次数
+        Message.error(message);
+      } else if (message.includes('过期')) {
+        Message.error('验证码已过期，请重新获取');
+      } else if (message.includes('邮箱') && message.includes('不一致')) {
+        Message.error('提交的邮箱与当前绑定邮箱不一致');
       } else {
-        Message.error(message || '请求参数错误');
+        Message.error(message || '验证码错误');
       }
+    } else if (status === 429) {
+      // 冷却期限制
+      Message.error(message || '邮箱修改过于频繁，请稍后再试');
     } else if (status === 401) {
       Message.error('登录已过期，请重新登录');
-      setTimeout(() => {
-        userStore.logout();
-        router.push('/login');
-      }, 1500);
-    } else if (status === 409) {
-      Message.error(message || '该邮箱已被其他用户使用');
-    } else if (status === 429) {
-      Message.error(message || '邮箱修改过于频繁，请稍后再试');
     } else {
-      const errorMessage = message || error?.message || '修改邮箱失败，请稍后重试';
+      const errorMessage = message || error?.message || '验证失败，请稍后重试';
       Message.error(errorMessage);
     }
   } finally {
@@ -361,21 +310,21 @@ defineExpose({
   }
 }
 
-.email-form {
+.verify-form {
   padding: 20px 0;
   display: flex;
   flex-direction: column;
   gap: 20px;
 }
 
-/* 安全提示 */
-.security-notice {
+/* 提示信息 */
+.info-notice {
   display: flex;
   gap: 12px;
   padding: 16px;
-  background: linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);
+  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
   border-radius: 12px;
-  border-left: 4px solid #ff9800;
+  border-left: 4px solid #2196f3;
 }
 
 .notice-icon {
@@ -390,19 +339,19 @@ defineExpose({
 .notice-title {
   font-size: 14px;
   font-weight: 600;
-  color: #e65100;
+  color: #1565c0;
   margin-bottom: 4px;
 }
 
 .notice-text {
   font-size: 13px;
-  color: #f57c00;
+  color: #1976d2;
   line-height: 1.5;
   margin: 0;
 }
 
-/* 当前邮箱显示 */
-.current-email-display {
+/* 邮箱显示 */
+.email-display {
   padding: 12px 16px;
   background: #f7f8fa;
   border-radius: 8px;
@@ -470,21 +419,6 @@ defineExpose({
     }
 
     &:focus {
-      border-color: #165dff;
-      box-shadow: 0 0 0 3px rgba(22, 93, 255, 0.1);
-    }
-  }
-
-  :deep(.arco-input-password) {
-    border-radius: 8px;
-    border: 2px solid #e5e6eb;
-    transition: all 0.3s ease;
-
-    &:hover {
-      border-color: #165dff;
-    }
-
-    &:focus-within {
       border-color: #165dff;
       box-shadow: 0 0 0 3px rgba(22, 93, 255, 0.1);
     }
