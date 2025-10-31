@@ -103,6 +103,9 @@
 
     <!-- 修改邮箱弹窗 -->
     <ChangeEmail ref="changeEmailRef" />
+
+    <!-- 验证当前邮箱弹窗 -->
+    <VerifyCurrentEmail ref="verifyCurrentEmailRef" />
   </teleport>
 </template>
 
@@ -118,6 +121,7 @@ import { getUserInfo, updateUserInfo, uploadAvatar } from '@/api/user';
 import type { UserInfo } from '@/components/type';
 import ChangePassword from './changePassword.vue';
 import ChangeEmail from './changeEmail.vue';
+import VerifyCurrentEmail from './verifyCurrentEmail.vue';
 import defaultAvatar from '@/assets/头像.svg';
 import { processAvatarImage } from '@/utils/imageCompress';
 
@@ -157,6 +161,9 @@ const changePasswordRef = ref<InstanceType<typeof ChangePassword>>();
 // 修改邮箱弹窗ref
 const changeEmailRef = ref<InstanceType<typeof ChangeEmail>>();
 
+// 验证当前邮箱弹窗ref
+const verifyCurrentEmailRef = ref<InstanceType<typeof VerifyCurrentEmail>>();
+
 // 监听 store 中邮箱的变化，自动更新显示
 watch(() => userStore.email, (newEmail) => {
   if (visible.value) {
@@ -181,10 +188,20 @@ const openChangePasswordDialog = () => {
   changePasswordRef.value?.openDialog();
 };
 
-// 打开修改邮箱弹窗
+// 打开修改邮箱弹窗（先验证当前邮箱）
 const openChangeEmailDialog = () => {
-  changeEmailRef.value?.openDialog();
-  // 邮箱修改成功后会自动刷新用户信息
+  if (!userStore.email) {
+    Message.error('当前未绑定邮箱');
+    return;
+  }
+
+  console.log('=== 开始修改邮箱流程 ===');
+  // 先打开验证当前邮箱的弹窗
+  verifyCurrentEmailRef.value?.openDialog(() => {
+    console.log('当前邮箱验证成功，打开修改邮箱弹窗');
+    // 验证成功后的回调，打开修改邮箱弹窗
+    changeEmailRef.value?.openDialog();
+  });
 };
 
 // 点击头像触发文件选择

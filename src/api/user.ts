@@ -32,7 +32,7 @@ interface SendVerificationCodeRequest {
 
 // 发送邮箱验证码响应类型
 interface SendVerificationCodeResponse {
-  statusCode: number;
+  code: number;
   message: string;
   data: {
     message: string;
@@ -99,20 +99,44 @@ export const uploadAvatar = async (file: File): Promise<UploadAvatarResponse> =>
   }
 };
 
+// 验证当前邮箱验证码请求类型
+interface VerifyOldEmailRequest {
+  email: string;  // 当前邮箱（用于校验是否一致）
+  code: string;   // 当前邮箱验证码
+}
+
+// 验证当前邮箱验证码响应类型
+interface VerifyOldEmailResponse {
+  code: number;
+  message: string;
+  data: {
+    verified: boolean;
+  };
+  timestamp: string;
+}
+
+// 验证当前邮箱验证码API
+export const verifyOldEmail = async (data: VerifyOldEmailRequest): Promise<VerifyOldEmailResponse> => {
+  try {
+    const response = await http.put<VerifyOldEmailResponse>('/users/email/verify-old', data);
+    return response;
+  } catch (error) {
+    console.error('验证当前邮箱失败:', error);
+    throw error;
+  }
+};
+
 // 更换邮箱API请求类型
 interface ChangeEmailRequest {
-  currentPassword: string;  // 当前密码
-  newEmail: string;         // 新邮箱
-  code: string;             // 验证码
+  newEmail: string;      // 新邮箱
+  newEmailCode: string;  // 新邮箱验证码
 }
 
 // 更换邮箱API响应类型
 interface ChangeEmailResponse {
-  statusCode: number;
+  code: number;
   message: string;
-  data: {
-    message: string;
-  };
+  data: UserInfo;
   timestamp: string;
 }
 

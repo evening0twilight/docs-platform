@@ -113,7 +113,8 @@ const {
 // 从store中获取用户信息
 const userInfo = computed<UserInfo>(() => ({
   id: userStore.token || '10001', // 使用token作为临时id
-  name: userStore.name || '默认用户',
+  username: userStore.name || '默认用户',
+  name: userStore.name || '默认用户', // 兼容旧版本
   email: userStore.email || '',
   power: 1,
   avatar: userStore.avatar || undefined
