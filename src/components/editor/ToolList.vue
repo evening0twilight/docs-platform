@@ -211,17 +211,15 @@ const getButtonClass = (markType: string, options?: any) => {
 
 <style scoped>
 .toolContainer {
-  border-bottom: 2px solid #dcdfe6;
   height: 50px;
   min-height: 50px;
   display: flex;
   align-items: center;
   padding: 0 0.5rem;
-  flex-wrap: wrap;
-  gap: 50px;
+  flex-wrap: nowrap; /* 不换行,保持在一行 */
+  gap: 8px;
   background: #fff;
-  z-index: 1;
-  flex-shrink: 0;
+  white-space: nowrap; /* 防止内容换行 */
 }
 
 .toolContainer > div {

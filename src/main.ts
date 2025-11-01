@@ -11,6 +11,8 @@ import './style.css'
 import App from './App.vue'
 // 引入用户store
 import { useUserStore } from './store/user'
+// 引入 WebSocket 服务
+import { socketService } from './services/socket'
 
 const app = createApp(App)
 // pinia
@@ -25,5 +27,30 @@ app.use(ArcoVue)
 // 初始化用户状态
 const userStore = useUserStore()
 userStore.initUserState()
+
+// 初始化 WebSocket 连接
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL
+if (SOCKET_URL) {
+  console.log('[App] 初始化 WebSocket 连接:', SOCKET_URL)
+  
+  // 获取 token
+  const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+  
+  // 连接 WebSocket
+  socketService.connect(SOCKET_URL, token)
+  
+  // 如果已登录，进行身份认证
+  if (token && userStore.name) {
+    setTimeout(() => {
+      socketService.authenticate(
+        userStore.token || 'guest',
+        userStore.name || '访客',
+        userStore.avatar
+      )
+    }, 500) // 延迟确保连接成功
+  }
+} else {
+  console.warn('[App] 未配置 VITE_SOCKET_URL，WebSocket 功能将不可用')
+}
 
 app.mount('#app')
