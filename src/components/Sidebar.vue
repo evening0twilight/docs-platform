@@ -126,6 +126,7 @@ const settingInfo = ref<InstanceType<typeof SettingInfo>>();
 const addDocs = ref<InstanceType<typeof AddDocs>>();
 // DocsArea组件的ref
 const docsArea = ref<InstanceType<typeof DocsArea>>();
+const lastDoc = ref<any>(null)
 
 // 在组件挂载后检查ref并获取用户信息
 onMounted(async () => {
@@ -144,6 +145,8 @@ const addPopover = ref();
 
 // 处理文档点击事件，传递给父组件
 const handleDocumentClick = (doc: any) => {
+  // 保存最近一次点击的文档，便于分享等操作使用
+  lastDoc.value = doc
   emit('document-click', doc);
 };
 

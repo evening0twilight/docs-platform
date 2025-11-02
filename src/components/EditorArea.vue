@@ -1,28 +1,70 @@
 <template>
-  <div class="editorContainer w-full h-full flex flex-col overflow-hidden">
-    <!-- 空状态：没有选择文档时显示 -->
-    <EmptyState v-if="!documentId" />
+  <div class="editorContainer w-full h-full flex overflow-hidden">
+    <!-- 主编辑区域 -->
+    <div class="editor-main flex-1 flex flex-col overflow-hidden">
+      <!-- 空状态：没有选择文档时显示 -->
+      <EmptyState v-if="!documentId" />
 
-    <!-- 加载状态 -->
-    <div v-else-if="loading" class="loading-overlay">
-      <a-spin :size="32" tip="加载文档中..." />
-    </div>
-
-    <!-- 编辑器内容 -->
-    <template v-else>
-      <!-- 文档信息栏（可选） -->
-      <div v-if="documentData" class="document-info">
-        <h3>{{ documentData.name }}</h3>
-        <span v-if="isModified" class="modified-indicator">• 未保存</span>
-        <span v-else class="saved-indicator">• 已保存</span>
+      <!-- 加载状态 -->
+      <div v-else-if="loading" class="loading-overlay">
+        <a-spin :size="32" tip="加载文档中..." />
       </div>
 
-      <!-- 工具栏 -->
-      <ToolList v-if="editor" :editor="editor" />
+      <!-- 编辑器内容 -->
+      <template v-else>
+        <!-- 文档信息栏 -->
+        <div v-if="documentData" class="document-info">
+          <div class="doc-title-section">
+            <h3>{{ documentData.name }}</h3>
+            <span v-if="isModified" class="modified-indicator">• 未保存</span>
+            <span v-else class="saved-indicator">• 已保存</span>
+          </div>
 
-      <!-- 编辑器主体 -->
-      <editor-content :editor="editor" class="w-full h-full text-black" />
-    </template>
+          <!-- 在线用户简要信息 -->
+          <div v-if="collaboration" class="online-status">
+            <span :class="['status-dot', collaboration.isConnected.value ? 'connected' : 'disconnected']"></span>
+            <span class="status-text">
+              {{ collaboration.isConnected.value ? `${collaboration.onlineUsers.value.length} 人在线` : '离线' }}
+            </span>
+          </div>
+        </div>
+
+        <!-- 工具栏容器 -->
+        <div class="toolbar-container">
+          <!-- 左侧:TipTap工具栏(可横向滚动) -->
+          <div class="toolbar-tools">
+            <ToolList v-if="editor" :editor="editor" />
+          </div>
+
+          <!-- 右侧:分享按钮(固定) -->
+          <div class="toolbar-actions">
+            <a-button type="primary" size="small" @click="openShareDialog" :disabled="!documentId">
+              🔗 分享
+            </a-button>
+          </div>
+        </div>
+
+        <!-- 编辑器主体 -->
+        <editor-content :editor="editor" class="w-full h-full text-black" />
+      </template>
+    </div>
+
+    <!-- 在线用户侧边栏（可折叠） -->
+    <div v-if="collaboration && documentId" class="online-users-sidebar" :class="{ collapsed: sidebarCollapsed }">
+      <!-- 折叠按钮始终可见 -->
+      <div class="sidebar-toggle" @click="sidebarCollapsed = !sidebarCollapsed"
+        :title="sidebarCollapsed ? '展开在线用户' : '收起在线用户'">
+        <span v-if="sidebarCollapsed">👥</span>
+        <span v-else>▶</span>
+      </div>
+      <!-- 内容区域 -->
+      <div v-show="!sidebarCollapsed" class="sidebar-content">
+        <OnlineUsers :users="collaboration.onlineUsers.value" :is-connected="collaboration.isConnected.value" />
+      </div>
+    </div>
+
+    <!-- 分享对话框 -->
+    <ShareDialog ref="shareDialogRef" />
   </div>
 </template>
 
@@ -39,6 +81,10 @@ import Underline from '@tiptap/extension-underline'
 import StarterKit from '@tiptap/starter-kit'
 import ToolList from './editor/ToolList.vue';
 import EmptyState from './EmptyState.vue';
+import OnlineUsers from './OnlineUsers.vue';
+import ShareDialog from './sider/diolog/shareDialog.vue';
+import { useCollaboration } from '@/composables/useCollaboration'
+import { Message } from '@arco-design/web-vue'
 
 // 定义props（支持路由参数）
 const props = defineProps<{
@@ -55,6 +101,9 @@ const documentId = computed(() => props.id || route.params.id as string)
 const loading = ref(false)
 const documentData = ref<any>(null)
 const isModified = ref(false)
+const isRemoteUpdate = ref(false) // 标记是否为远程更新,避免循环发送
+const sidebarCollapsed = ref(false) // 侧边栏折叠状态
+const shareDialogRef = ref<InstanceType<typeof ShareDialog>>() // 分享对话框ref
 
 interface State {
   // editor: any
@@ -67,6 +116,100 @@ const state = reactive<State>({
 const {
   // editor
 } = toRefs(state);
+
+// WebSocket 协作功能（只在有文档ID时启用）
+const collaboration = computed(() => {
+  if (!documentId.value) return null
+
+  return useCollaboration({
+    documentId: documentId.value,
+
+    // 接收远程编辑
+    onRemoteEdit: (edit) => {
+      console.log('[Editor] 收到远程编辑:', edit)
+      applyRemoteEdit(edit)
+    },
+
+    // 接收远程光标（可选，暂时只打印日志）
+    onRemoteCursor: (cursor) => {
+      console.log('[Editor] 远程光标:', cursor)
+      // TODO: 渲染远程用户光标
+    },
+
+    // 接收选区变化（可选）
+    onRemoteSelection: (selection) => {
+      console.log('[Editor] 远程选区:', selection)
+      // TODO: 高亮远程用户选区
+    },
+
+    // 接收输入状态
+    onUserTyping: (typing) => {
+      if (typing.isTyping) {
+        console.log(`[Editor] ${typing.username} 正在输入...`)
+        // TODO: 显示输入指示器
+      }
+    },
+  })
+})
+
+// 应用远程编辑到编辑器
+const applyRemoteEdit = (edit: any) => {
+  if (!editor.value || isRemoteUpdate.value) return
+
+  try {
+    isRemoteUpdate.value = true // 标记为远程更新
+
+    const { type, content, position } = edit
+
+    switch (type) {
+      case 'replace':
+        // 完全替换内容（简单场景）
+        editor.value.commands.setContent(content)
+        break
+
+      case 'insert':
+        // TODO: 实现精确位置插入（需要位置计算）
+        console.log('[Editor] 插入操作暂未实现精确位置')
+        break
+
+      case 'delete':
+        // TODO: 实现精确位置删除
+        console.log('[Editor] 删除操作暂未实现精确位置')
+        break
+
+      default:
+        console.warn('[Editor] 未知的编辑类型:', type)
+    }
+  } catch (error) {
+    console.error('[Editor] 应用远程编辑失败:', error)
+  } finally {
+    isRemoteUpdate.value = false
+  }
+}
+
+// 广播编辑操作（节流，避免过于频繁）
+let broadcastTimer: number | null = null
+const broadcastEdit = () => {
+  if (!collaboration.value || !editor.value || !documentId.value) return
+
+  // 节流：300ms 内只发送一次
+  if (broadcastTimer) {
+    clearTimeout(broadcastTimer)
+  }
+
+  broadcastTimer = setTimeout(() => {
+    const content = editor.value?.getHTML()
+    if (!content || !collaboration.value || !documentId.value) return
+
+    collaboration.value.sendEdit({
+      documentId: documentId.value,
+      type: 'replace', // 简单模式：完全替换内容
+      content: content,
+      position: { line: 0, column: 0 },
+      timestamp: Date.now(),
+    })
+  }, 300)
+}
 
 // 创建编辑器实例
 const editor = useEditor({
@@ -122,10 +265,22 @@ const editor = useEditor({
   onUpdate: ({ editor }) => {
     // 内容变化时的处理
     handleContentChange()
+
+    // 如果不是远程更新，则广播编辑操作
+    if (!isRemoteUpdate.value && collaboration.value && documentId.value) {
+      broadcastEdit()
+    }
   },
   onSelectionUpdate: ({ editor }) => {
     // 选区变化时强制更新（触发工具栏响应式更新）
     // Vue 会自动检测到 editor 的状态变化
+
+    // 广播光标位置（可选，需要转换为行列位置）
+    if (collaboration.value && editor && documentId.value) {
+      // TODO: 实现光标位置计算和广播
+      // const position = calculateCursorPosition(editor)
+      // collaboration.value.sendCursor(position)
+    }
   }
 })
 
@@ -237,6 +392,21 @@ const manualSave = async () => {
   }
 }
 
+// 打开分享对话框
+const openShareDialog = () => {
+  if (!documentId.value) {
+    Message.warning('请先选择要分享的文档')
+    return
+  }
+
+  if (shareDialogRef.value && typeof shareDialogRef.value.openDialog === 'function') {
+    // 传递当前文档ID
+    shareDialogRef.value.openDialog(documentId.value)
+  } else {
+    console.warn('分享对话框未准备好')
+  }
+}
+
 // 监听文档ID变化
 watch(() => documentId.value, (newId, oldId) => {
   if (newId && newId !== oldId && editor.value) {
@@ -293,12 +463,73 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
+/* 工具栏容器 - flex布局 */
+.toolbar-container {
+  display: flex;
+  align-items: center;
+  border-bottom: 2px solid #dcdfe6;
+  background: #fff;
+  height: 50px;
+  min-height: 50px;
+  flex-shrink: 0;
+  gap: 8px;
+  padding-right: 12px;
+  position: relative;
+  z-index: 10;
+}
+
+/* 左侧工具区域 - 可横向滚动 */
+.toolbar-tools {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  min-width: 0;
+  /* 允许flex子项收缩 */
+
+  /* 隐藏滚动条但保留滚动功能 */
+  scrollbar-width: thin;
+  scrollbar-color: #dcdfe6 transparent;
+}
+
+.toolbar-tools::-webkit-scrollbar {
+  height: 4px;
+}
+
+.toolbar-tools::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.toolbar-tools::-webkit-scrollbar-thumb {
+  background: #dcdfe6;
+  border-radius: 2px;
+}
+
+.toolbar-tools::-webkit-scrollbar-thumb:hover {
+  background: #c0c4cc;
+}
+
+/* 右侧操作区域 - 固定位置 */
+.toolbar-actions {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 12px;
+  border-left: 1px solid #dcdfe6;
+}
+
 .editorContainer {
   width: 100%;
   height: 100%;
   display: flex;
-  flex-direction: column;
   position: relative;
+  overflow: hidden;
+}
+
+.editor-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -316,12 +547,19 @@ onBeforeUnmount(() => {
 }
 
 .document-info {
-  padding: 6px 16px;
+  padding: 8px 16px;
   background: #f8f9fa;
   border-bottom: 1px solid #e5e7eb;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
+}
+
+.doc-title-section {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .document-info h3 {
@@ -341,6 +579,82 @@ onBeforeUnmount(() => {
   color: #10b981;
   font-weight: 500;
   font-size: 14px;
+}
+
+.online-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transition: background-color 0.3s;
+}
+
+.status-dot.connected {
+  background-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.2);
+}
+
+.status-dot.disconnected {
+  background-color: #ef4444;
+}
+
+/* 在线用户侧边栏 */
+.online-users-sidebar {
+  width: 280px;
+  position: relative;
+  transition: width 0.3s ease;
+  background: #fff;
+  border-left: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+}
+
+.online-users-sidebar.collapsed {
+  width: 40px;
+}
+
+.sidebar-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.sidebar-toggle {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 60px;
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-left: none;
+  border-radius: 0 6px 6px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 14px;
+  color: #6b7280;
+  z-index: 20;
+  transition: all 0.2s ease;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+}
+
+.online-users-sidebar.collapsed .sidebar-toggle {
+  left: 8px;
+}
+
+.sidebar-toggle:hover {
+  background: #e5e7eb;
+  color: #374151;
+  transform: translateY(-50%) scale(1.05);
 }
 
 .editorContainer :deep(.ProseMirror) {
