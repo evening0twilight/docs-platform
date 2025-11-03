@@ -4,6 +4,7 @@ import type { UserInfo } from '@/components/type'
 
 interface UserState {
   token: string
+  id: string | number  // ⭐ 新增 userId
   name: string
   email: string
   avatar: string
@@ -19,6 +20,7 @@ interface LoginParams {
 export const useUserStore = defineStore('user', {
   state: (): UserState => ({
     token: '',
+    id: '',  // ⭐ 初始化 id
     name: '',
     email: '',
     avatar: '',
@@ -29,6 +31,7 @@ export const useUserStore = defineStore('user', {
   getters: {
     hasToken: (state) => !!state.token,
     userInfo: (state) => ({
+      id: state.id,  // ⭐ 添加到 getter
       name: state.name,
       email: state.email,
       avatar: state.avatar,
@@ -40,6 +43,7 @@ export const useUserStore = defineStore('user', {
     // 设置用户信息
     setUser(user: Partial<UserState>) {
       if (user.token !== undefined) this.token = user.token
+      if (user.id !== undefined) this.id = user.id  // ⭐ 设置 id
       if (user.name !== undefined) this.name = user.name
       if (user.email !== undefined) this.email = user.email
       if (user.avatar !== undefined) this.avatar = user.avatar
@@ -54,6 +58,7 @@ export const useUserStore = defineStore('user', {
     saveToLocalStorage() {
       const userState = {
         token: this.token,
+        id: this.id,  // ⭐ 保存 id
         name: this.name,
         email: this.email,
         avatar: this.avatar,
@@ -70,6 +75,7 @@ export const useUserStore = defineStore('user', {
         try {
           const userState = JSON.parse(stored)
           this.token = userState.token || ''
+          this.id = userState.id || ''  // ⭐ 加载 id
           this.name = userState.name || ''
           this.email = userState.email || ''
           this.avatar = userState.avatar || ''
@@ -135,6 +141,7 @@ export const useUserStore = defineStore('user', {
           const displayName = userInfo?.displayName || userInfo?.username || loginParams.username
           
           this.setUser({
+            id: userInfo?.id || '',  // ⭐ 保存 userId
             name: displayName,
             email: userInfo?.email || '',
             avatar: userInfo?.avatar || '',
@@ -167,6 +174,7 @@ export const useUserStore = defineStore('user', {
         const displayName = userInfo.displayName || userInfo.username || userInfo.name || ''
         
         this.setUser({
+          id: userInfo.id || '',  // ⭐ 保存 userId
           name: displayName,
           email: userInfo.email || '',
           avatar: userInfo.avatar || '',
@@ -187,6 +195,7 @@ export const useUserStore = defineStore('user', {
     // 登出
     logout() {
       this.token = ''
+      this.id = ''  // ⭐ 清除 id
       this.name = ''
       this.email = ''
       this.avatar = ''

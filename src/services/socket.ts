@@ -96,20 +96,29 @@ class SocketService {
       
       // ⭐ 连接成功后，如果有用户信息，立即进行身份认证
       const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-      const userInfoStr = localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo')
+      // ⭐ 修复：从 user-store 读取用户信息
+      const userStoreStr = localStorage.getItem('user-store') || sessionStorage.getItem('user-store')
       
-      if (token && userInfoStr) {
+      if (token && userStoreStr) {
         try {
-          const userInfo = JSON.parse(userInfoStr)
+          const userStore = JSON.parse(userStoreStr)
           console.log('[Socket] 🔐 自动进行身份认证...')
-          this.authenticate(
-            userInfo.id?.toString() || userInfo.userId?.toString() || 'guest',
-            userInfo.name || userInfo.username || '访客',
-            userInfo.avatar
-          )
+          console.log('[Socket] 用户信息:', userStore)
+          
+          // ⭐ 使用 userStore 中的字段
+          const userId = userStore.id?.toString() || 'guest-' + Date.now()
+          const username = userStore.name || '访客'
+          const avatar = userStore.avatar || ''
+          
+          console.log('[Socket] 认证参数:', { userId, username, avatar })
+          this.authenticate(userId, username, avatar)
         } catch (e) {
           console.error('[Socket] ❌ 解析用户信息失败:', e)
         }
+      } else {
+        console.warn('[Socket] ⚠️ 未找到 token 或用户信息，跳过认证')
+        console.log('[Socket] token:', token ? '存在' : '不存在')
+        console.log('[Socket] user-store:', userStoreStr ? '存在' : '不存在')
       }
     })
 
