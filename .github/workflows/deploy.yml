@@ -56,7 +56,7 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
-          source: "deploy.tar.gz"
+          source: "deploy.tar.gz,nginx.conf"
           target: "/tmp/"
 
       # 8. 解压并移动文件到部署目录
@@ -91,6 +91,15 @@ jobs:
             # 设置权限
             sudo chown -R www-data:www-data ${{ secrets.DEPLOY_PATH }}
             sudo chmod -R 755 ${{ secrets.DEPLOY_PATH }}
+            
+            # ⭐ 更新 Nginx 配置（新增）
+            if [ -f "/tmp/nginx.conf" ]; then
+              echo "Updating Nginx configuration..."
+              sudo cp /etc/nginx/sites-available/onespecial.me /etc/nginx/sites-available/onespecial.me.backup
+              sudo cp /tmp/nginx.conf /etc/nginx/sites-available/onespecial.me
+              sudo nginx -t && echo "✅ Nginx config test passed" || echo "❌ Nginx config test failed"
+              rm -f /tmp/nginx.conf
+            fi
             
             # 重启 Nginx
             sudo systemctl reload nginx
