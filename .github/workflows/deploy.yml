@@ -40,6 +40,8 @@ jobs:
         env:
           NODE_ENV: production
           VITE_API_BASE_URL: /api
+          VITE_SOCKET_URL: https://onespecial.me
+          VITE_APP_TITLE: 文档平台
 
       # 6. 创建部署包
       - name: Create deployment archive
