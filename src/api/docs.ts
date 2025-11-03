@@ -34,6 +34,7 @@ interface DocumentResponse {
   creatorId: number;
   visibility: 'public' | 'private';
   isDeleted: boolean;
+  permission?: 'owner' | 'editor' | 'viewer'; // 当前用户对此文档的权限
   children?: DocumentResponse[]; // 递归包含子节点
   created_time: string;
   updated_time: string;
@@ -277,3 +278,39 @@ export const getMatchedNodePaths = async (keyword: string): Promise<string[]> =>
     throw error;
   }
 };
+
+// 获取分享给我的文档列表
+export const getSharedDocuments = async (params?: {
+  page?: number
+  limit?: number
+  role?: 'editor' | 'viewer'
+}): Promise<{
+  documents: Array<DocumentResponse & {
+    owner: {
+      id: number
+      username: string
+      email?: string
+    }
+    sharedAt: string
+  }>
+  pagination: {
+    total: number
+    page: number
+    limit: number
+    totalPages: number
+  }
+}> => {
+  try {
+    const queryParams = new URLSearchParams()
+    if (params?.page) queryParams.append('page', params.page.toString())
+    if (params?.limit) queryParams.append('limit', params.limit.toString())
+    if (params?.role) queryParams.append('role', params.role)
+    
+    const url = `/documents/shared-with-me${queryParams.toString() ? '?' + queryParams.toString() : ''}`
+    const response = await http.get(url)
+    return response
+  } catch (error) {
+    console.error('获取分享文档失败:', error)
+    throw error
+  }
+}

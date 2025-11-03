@@ -49,8 +49,9 @@
       </template>
     </div>
 
-    <!-- 在线用户侧边栏（可折叠） -->
-    <div v-if="collaboration && documentId" class="online-users-sidebar" :class="{ collapsed: sidebarCollapsed }">
+    <!-- 在线用户侧边栏（仅在有在线用户时显示） -->
+    <div v-if="collaboration && documentId && collaboration.onlineUsers.value.length > 0" class="online-users-sidebar"
+      :class="{ collapsed: sidebarCollapsed }">
       <!-- 折叠按钮始终可见 -->
       <div class="sidebar-toggle" @click="sidebarCollapsed = !sidebarCollapsed"
         :title="sidebarCollapsed ? '展开在线用户' : '收起在线用户'">
@@ -303,6 +304,16 @@ const fetchDocument = async () => {
 
     // 设置编辑器内容
     editor.value.commands.setContent(doc.content || '')
+
+    // 根据权限设置编辑器是否可编辑
+    const permission = (doc as any).permission
+    const isEditable = permission === 'owner' || permission === 'editor'
+    editor.value.setEditable(isEditable)
+
+    // 如果是只读权限，提示用户
+    if (!isEditable && permission === 'viewer') {
+      Message.info('您只有查看权限，无法编辑此文档')
+    }
 
     // 更新标签标题
     tabsStore.updateTabTitle(documentId.value, doc.name)

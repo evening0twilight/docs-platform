@@ -108,9 +108,9 @@ async function handleShare() {
 
     Message.success('分享成功！')
 
-    // 生成分享链接
+    // 生成分享链接（修正路径为 /workspace/document/:id）
     const baseUrl = window.location.origin
-    shareLink.value = `${baseUrl}/document/${documentId.value}`
+    shareLink.value = `${baseUrl}/workspace/document/${documentId.value}`
 
     // 自动复制到剪贴板
     try {
