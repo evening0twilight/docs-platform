@@ -37,18 +37,8 @@ if (SOCKET_URL) {
   const token = localStorage.getItem('token') || sessionStorage.getItem('token')
   
   // 连接 WebSocket
+  // ⭐ 连接后会自动触发 'connected' 事件，然后在事件处理中自动认证
   socketService.connect(SOCKET_URL, token)
-  
-  // 如果已登录，进行身份认证
-  if (token && userStore.name) {
-    setTimeout(() => {
-      socketService.authenticate(
-        userStore.token || 'guest',
-        userStore.name || '访客',
-        userStore.avatar
-      )
-    }, 500) // 延迟确保连接成功
-  }
 } else {
   console.warn('[App] 未配置 VITE_SOCKET_URL，WebSocket 功能将不可用')
 }

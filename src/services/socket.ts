@@ -91,12 +91,30 @@ class SocketService {
 
     // ====== 连接事件 ======
     this.socket.on('connected', (data) => {
-      console.log('[Socket] 连接成功:', data)
+      console.log('[Socket] ✅ 连接成功:', data)
       this.isConnected.value = true
+      
+      // ⭐ 连接成功后，如果有用户信息，立即进行身份认证
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+      const userInfoStr = localStorage.getItem('userInfo') || sessionStorage.getItem('userInfo')
+      
+      if (token && userInfoStr) {
+        try {
+          const userInfo = JSON.parse(userInfoStr)
+          console.log('[Socket] 🔐 自动进行身份认证...')
+          this.authenticate(
+            userInfo.id?.toString() || userInfo.userId?.toString() || 'guest',
+            userInfo.name || userInfo.username || '访客',
+            userInfo.avatar
+          )
+        } catch (e) {
+          console.error('[Socket] ❌ 解析用户信息失败:', e)
+        }
+      }
     })
 
     this.socket.on('connect_error', (error) => {
-      console.error('[Socket] 连接失败:', error.message)
+      console.error('[Socket] ❌ 连接失败:', error.message)
       this.isConnected.value = false
       
       // 检查是否是认证错误
@@ -111,11 +129,12 @@ class SocketService {
       console.log('[Socket] 断开连接:', reason)
       this.isConnected.value = false
       this.isAuthenticated.value = false
+      this.onlineUsers.value = []
     })
 
     // ====== 认证事件 ======
     this.socket.on('authenticated', (data) => {
-      console.log('[Socket] 认证成功:', data)
+      console.log('[Socket] ✅ 身份验证成功:', data)
       this.isAuthenticated.value = true
       this.currentUser.value = {
         userId: data.userId,
@@ -123,11 +142,19 @@ class SocketService {
         socketId: data.socketId,
         color: data.color,
       }
+      
+      // ⭐ 认证成功后，如果有待加入的文档，立即加入
+      if (this.currentDocumentId) {
+        console.log('[Socket] 📄 认证成功，自动加入文档:', this.currentDocumentId)
+        this.socket?.emit('join-document', { documentId: this.currentDocumentId })
+      }
     })
 
     // ====== 文档房间事件 ======
     this.socket.on('joined-document', (data) => {
-      console.log('[Socket] 成功加入文档:', data)
+      console.log('[Socket] ✅ 成功加入文档:', data)
+      console.log('[Socket] 📋 当前在线用户:', data.users)
+      // ⭐ 关键: 设置初始在线用户列表
       this.onlineUsers.value = data.users || []
     })
 
@@ -137,8 +164,8 @@ class SocketService {
     })
 
     this.socket.on('user-joined', (data) => {
-      console.log('[Socket] 用户加入:', data)
-      // 添加新用户到在线列表
+      console.log('[Socket] 👤 新用户加入:', data)
+      // 添加新用户到在线列表（避免重复）
       const exists = this.onlineUsers.value.find(u => u.userId === data.userId)
       if (!exists) {
         this.onlineUsers.value.push({
@@ -209,11 +236,18 @@ class SocketService {
    */
   joinDocument(documentId: string) {
     if (!this.socket?.connected) {
-      console.warn('[Socket] 未连接，无法加入文档')
+      console.warn('[Socket] ⚠️ 未连接，无法加入文档')
       return
     }
 
-    console.log('[Socket] 加入文档:', documentId)
+    // ⭐ 如果还未认证，先保存 documentId，等认证成功后自动加入
+    if (!this.isAuthenticated.value) {
+      console.warn('[Socket] ⚠️ 未认证，保存 documentId，等待认证完成后加入')
+      this.currentDocumentId = documentId
+      return
+    }
+
+    console.log('[Socket] 📄 加入文档房间:', documentId)
     this.currentDocumentId = documentId
     this.socket.emit('join-document', { documentId })
   }

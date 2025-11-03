@@ -31,13 +31,27 @@ export function useCollaboration(options: UseCollaborationOptions) {
    */
   const joinDocument = () => {
     if (!socketService.isConnected.value) {
-      console.warn('[useCollaboration] WebSocket 未连接，延迟加入文档')
+      console.warn('[useCollaboration] ⚠️ WebSocket 未连接，等待连接后加入文档')
       // 等待连接后再加入
       const unwatch = watch(
         () => socketService.isConnected.value,
         (connected) => {
           if (connected) {
-            socketService.joinDocument(documentId)
+            // 连接成功后，等待认证
+            if (socketService.isAuthenticated.value) {
+              socketService.joinDocument(documentId)
+            } else {
+              // 如果还未认证，等待认证完成
+              const unwatchAuth = watch(
+                () => socketService.isAuthenticated.value,
+                (authenticated) => {
+                  if (authenticated) {
+                    socketService.joinDocument(documentId)
+                    unwatchAuth()
+                  }
+                }
+              )
+            }
             unwatch()
           }
         }
@@ -45,6 +59,22 @@ export function useCollaboration(options: UseCollaborationOptions) {
       return
     }
 
+    // 如果已连接但未认证，等待认证
+    if (!socketService.isAuthenticated.value) {
+      console.warn('[useCollaboration] ⚠️ 未认证，等待认证后加入文档')
+      const unwatchAuth = watch(
+        () => socketService.isAuthenticated.value,
+        (authenticated) => {
+          if (authenticated) {
+            socketService.joinDocument(documentId)
+            unwatchAuth()
+          }
+        }
+      )
+      return
+    }
+
+    // 已连接且已认证，直接加入
     socketService.joinDocument(documentId)
   }
 

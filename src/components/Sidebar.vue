@@ -47,12 +47,14 @@
       </div>
     </div>
     <!-- 文档 -->
-    <div class="flex-1 overflow-auto flex flex-col">
+    <div class="flex-1 overflow-auto flex flex-col" style="gap: 12px;">
       <!-- 我的文档区域 -->
       <div class="docs-section">
         <div class="section-header" @click="toggleMyDocs">
-          <span class="toggle-icon">{{ myDocsExpanded ? '▼' : '▶' }}</span>
-          <span class="section-title">我的文档</span>
+          <div class="header-left">
+            <span class="toggle-icon">{{ myDocsExpanded ? '▼' : '▶' }}</span>
+            <span class="section-title">我的文档</span>
+          </div>
         </div>
         <div v-show="myDocsExpanded" class="section-content">
           <DocsArea ref="docsArea" @document-click="handleDocumentClick" />
@@ -62,23 +64,28 @@
       <!-- 分享给我的文档区域 -->
       <div class="docs-section shared-section">
         <div class="section-header" @click="toggleSharedDocs">
-          <span class="toggle-icon">{{ sharedDocsExpanded ? '▼' : '▶' }}</span>
-          <span class="section-title">分享给我</span>
-          <a-badge v-if="sharedDocuments.length > 0" :count="sharedDocuments.length" />
+          <div class="header-left">
+            <span class="toggle-icon">{{ sharedDocsExpanded ? '▼' : '▶' }}</span>
+            <span class="section-title">分享给我</span>
+            <span v-if="sharedDocuments.length > 0" class="count-badge">({{ sharedDocuments.length }})</span>
+          </div>
         </div>
         <div v-show="sharedDocsExpanded" class="section-content">
           <!-- 加载状态 -->
-          <div v-if="sharedDocsLoading" class="flex justify-center items-center p-4">
+          <div v-if="sharedDocsLoading" class="loading-state">
             <a-spin size="small" />
+            <span class="loading-text">加载中...</span>
           </div>
           <!-- 分享文档列表 -->
           <div v-else-if="sharedDocuments.length > 0" class="shared-docs-list">
             <div v-for="doc in sharedDocuments" :key="doc.id" class="shared-doc-item"
               :class="{ active: lastDoc?.id === doc.id }" @click="handleSharedDocClick(doc)">
+              <div class="doc-icon">📄</div>
               <div class="doc-info">
                 <div class="doc-name">{{ doc.name }}</div>
                 <div class="doc-meta">
-                  <span class="owner">来自: {{ doc.owner.username }}</span>
+                  <span class="owner">{{ doc.owner.username }}</span>
+                  <span class="separator">•</span>
                   <span class="permission" :class="'perm-' + doc.permission">
                     {{ doc.permission === 'editor' ? '可编辑' : '只读' }}
                   </span>
@@ -88,6 +95,7 @@
           </div>
           <!-- 空状态 -->
           <div v-else class="empty-state">
+            <div class="empty-icon">📭</div>
             <div class="empty-text">暂无分享文档</div>
           </div>
         </div>
@@ -329,5 +337,229 @@ const handleClearSearch = () => {
   100% {
     background-position: 0% 50%;
   }
+}
+
+/* ====== 文档区域样式 ====== */
+.docs-section {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+}
+
+.docs-section:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+/* 区域标题 */
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.3s ease;
+}
+
+.section-header:hover {
+  background: linear-gradient(135deg, #5568d3 0%, #6a3f91 100%);
+}
+
+.section-header:active {
+  transform: scale(0.98);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toggle-icon {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.9);
+  transition: transform 0.3s ease;
+  display: inline-block;
+  width: 16px;
+  text-align: center;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+}
+
+.count-badge {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 500;
+}
+
+/* 区域内容 */
+.section-content {
+  padding: 8px;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+/* 分享文档区域特殊样式 */
+.shared-section .section-header {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.shared-section .section-header:hover {
+  background: linear-gradient(135deg, #e082ea 0%, #e4465b 100%);
+}
+
+/* ====== 加载状态 ====== */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+  gap: 12px;
+}
+
+.loading-text {
+  font-size: 13px;
+  color: #86909c;
+}
+
+/* ====== 分享文档列表 ====== */
+.shared-docs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.shared-doc-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.shared-doc-item:hover {
+  background: #f7f8fa;
+  border-color: #d1d5db;
+  transform: translateX(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.shared-doc-item.active {
+  background: #e8f3ff;
+  border-color: #4080ff;
+  box-shadow: 0 2px 8px rgba(64, 128, 255, 0.15);
+}
+
+.doc-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.doc-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.doc-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #1d2129;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.doc-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #86909c;
+}
+
+.owner {
+  color: #4e5969;
+  font-weight: 400;
+}
+
+.separator {
+  color: #c9cdd4;
+  font-weight: normal;
+}
+
+.permission {
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.permission.perm-editor {
+  background: #e8f7ed;
+  color: #00b42a;
+}
+
+.permission.perm-viewer {
+  background: #fff7e8;
+  color: #ff7d00;
+}
+
+/* ====== 空状态 ====== */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 16px;
+  gap: 12px;
+}
+
+.empty-icon {
+  font-size: 48px;
+  opacity: 0.6;
+}
+
+.empty-text {
+  font-size: 13px;
+  color: #86909c;
+  text-align: center;
+}
+
+/* 滚动条样式 */
+.section-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.section-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.section-content::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+}
+
+.section-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.2);
 }
 </style>
