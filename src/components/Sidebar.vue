@@ -47,8 +47,51 @@
       </div>
     </div>
     <!-- 文档 -->
-    <div class="flex-1 overflow-auto">
-      <DocsArea ref="docsArea" @document-click="handleDocumentClick" />
+    <div class="flex-1 overflow-auto flex flex-col">
+      <!-- 我的文档区域 -->
+      <div class="docs-section">
+        <div class="section-header" @click="toggleMyDocs">
+          <span class="toggle-icon">{{ myDocsExpanded ? '▼' : '▶' }}</span>
+          <span class="section-title">我的文档</span>
+        </div>
+        <div v-show="myDocsExpanded" class="section-content">
+          <DocsArea ref="docsArea" @document-click="handleDocumentClick" />
+        </div>
+      </div>
+
+      <!-- 分享给我的文档区域 -->
+      <div class="docs-section shared-section">
+        <div class="section-header" @click="toggleSharedDocs">
+          <span class="toggle-icon">{{ sharedDocsExpanded ? '▼' : '▶' }}</span>
+          <span class="section-title">分享给我</span>
+          <a-badge v-if="sharedDocuments.length > 0" :count="sharedDocuments.length" />
+        </div>
+        <div v-show="sharedDocsExpanded" class="section-content">
+          <!-- 加载状态 -->
+          <div v-if="sharedDocsLoading" class="flex justify-center items-center p-4">
+            <a-spin size="small" />
+          </div>
+          <!-- 分享文档列表 -->
+          <div v-else-if="sharedDocuments.length > 0" class="shared-docs-list">
+            <div v-for="doc in sharedDocuments" :key="doc.id" class="shared-doc-item"
+              :class="{ active: lastDoc?.id === doc.id }" @click="handleSharedDocClick(doc)">
+              <div class="doc-info">
+                <div class="doc-name">{{ doc.name }}</div>
+                <div class="doc-meta">
+                  <span class="owner">来自: {{ doc.owner.username }}</span>
+                  <span class="permission" :class="'perm-' + doc.permission">
+                    {{ doc.permission === 'editor' ? '可编辑' : '只读' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- 空状态 -->
+          <div v-else class="empty-state">
+            <div class="empty-text">暂无分享文档</div>
+          </div>
+        </div>
+      </div>
     </div>
     <!-- 历史记录 -->
     <!-- <div class="w-full h-[50px] flex justify-center items-center px-[10px] py-[1px] flex-shrink-0">
@@ -78,6 +121,7 @@ import SettingInfo from './sider/diolog/settingInfo.vue'
 import AddDocs from './sider/diolog/addDocs.vue';
 import DocsArea from './sider/docsArea.vue'
 import unImgUrl from '@/assets/头像.svg';
+import { getSharedDocuments } from '@/api/docs'
 
 // 获取用户store
 const userStore = useUserStore()
@@ -128,6 +172,12 @@ const addDocs = ref<InstanceType<typeof AddDocs>>();
 const docsArea = ref<InstanceType<typeof DocsArea>>();
 const lastDoc = ref<any>(null)
 
+// 分享文档相关状态
+const myDocsExpanded = ref(true)  // 我的文档默认展开
+const sharedDocsExpanded = ref(false)  // 分享给我默认折叠
+const sharedDocuments = ref<any[]>([])
+const sharedDocsLoading = ref(false)
+
 // 在组件挂载后检查ref并获取用户信息
 onMounted(async () => {
   nextTick(() => {
@@ -140,8 +190,45 @@ onMounted(async () => {
     await userStore.fetchUserInfo();
     console.log('已获取用户信息:', userStore.name, userStore.avatar);
   }
+
+  // 获取分享给我的文档
+  fetchSharedDocuments()
 });
 const addPopover = ref();
+
+// 切换我的文档展开/折叠
+const toggleMyDocs = () => {
+  myDocsExpanded.value = !myDocsExpanded.value
+}
+
+// 切换分享文档展开/折叠
+const toggleSharedDocs = () => {
+  sharedDocsExpanded.value = !sharedDocsExpanded.value
+  // 首次展开时加载数据
+  if (sharedDocsExpanded.value && sharedDocuments.value.length === 0) {
+    fetchSharedDocuments()
+  }
+}
+
+// 获取分享给我的文档列表
+const fetchSharedDocuments = async () => {
+  try {
+    sharedDocsLoading.value = true
+    const res = await getSharedDocuments()
+    sharedDocuments.value = res.documents || []
+    console.log('分享给我的文档:', sharedDocuments.value)
+  } catch (error) {
+    console.error('获取分享文档失败:', error)
+  } finally {
+    sharedDocsLoading.value = false
+  }
+}
+
+// 处理分享文档点击
+const handleSharedDocClick = (doc: any) => {
+  lastDoc.value = doc
+  emit('document-click', doc)
+}
 
 // 处理文档点击事件，传递给父组件
 const handleDocumentClick = (doc: any) => {

@@ -108,10 +108,14 @@ router.beforeEach((to, _from, next) => {
     // 默认需要认证，除非明确设置为false
     
     if (!token && !userStore.hasToken) {
-      // 没有token，跳转到登录页
+      // 没有token，跳转到登录页，并保存原始目标路径
       console.warn('未找到token，跳转到登录页')
       if (to.path !== '/login') {
-        next('/login')
+        // 保存重定向路径到query参数
+        next({
+          path: '/login',
+          query: { redirect: to.fullPath }
+        })
         return
       }
     } else if (token && !userStore.hasToken) {
@@ -121,10 +125,12 @@ router.beforeEach((to, _from, next) => {
     }
   }
 
-  // 如果已登录且访问登录页，重定向到工作台
+  // 如果已登录且访问登录页，重定向到工作台或原始目标页面
   if (to.path === '/login' && (userStore.hasToken || token)) {
-    console.log('已登录，从登录页重定向到工作台')
-    next('/workspace')
+    console.log('已登录，从登录页重定向')
+    // 检查是否有重定向目标
+    const redirectPath = (to.query.redirect as string) || '/workspace'
+    next(redirectPath)
     return
   }
 
