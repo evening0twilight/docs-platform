@@ -3,7 +3,7 @@ import type { TreeNode } from '@/api/type'
 
 // 定义文档相关的类型
 interface CreateDocumentRequest {
-  title: string; // 文档使用 title 字段
+  title: string;
   content?: string;
   description?: string;
   type?: string;
@@ -11,20 +11,20 @@ interface CreateDocumentRequest {
 }
 
 interface CreateFolderRequest {
-  name: string; // 文件夹使用 name 字段
+  name: string;
   parentId?: number | null;
 }
 
 interface UpdateDocumentRequest {
   title?: string;
-  content?: string; // 改为string类型
+  content?: string;
 }
 
 interface DocumentResponse {
-  id: number; // 后端返回的是数字ID
-  name: string; // 后端使用name而不是title
+  id: number;
+  name: string;
   description: string;
-  itemType: 'document' | 'folder'; // 后端使用itemType
+  itemType: 'document' | 'folder'; 
   author: string | null;
   content: string | null;
   thumb_url: string;
@@ -34,14 +34,13 @@ interface DocumentResponse {
   creatorId: number;
   visibility: 'public' | 'private';
   isDeleted: boolean;
-  permission?: 'owner' | 'editor' | 'viewer'; // 当前用户对此文档的权限
-  children?: DocumentResponse[]; // 递归包含子节点
+  permission?: 'owner' | 'editor' | 'viewer';
+  children?: DocumentResponse[];
   created_time: string;
   updated_time: string;
 }
 
 interface TreeNodeResponse extends DocumentResponse {
-  // TreeNodeResponse就是DocumentResponse，因为后端返回的就是完整的树结构
 }
 
 interface FolderContentsResponse {
@@ -61,7 +60,6 @@ interface DocumentPathResponse {
   breadcrumbs: DocumentResponse[];
 }
 
-// ====== 基础CRUD操作 ======
 
 // 创建文档
 export const createDocument = async (documentData: CreateDocumentRequest): Promise<DocumentResponse> => {
@@ -170,12 +168,12 @@ export const getFolderContents = async (parentId: string | number): Promise<Fold
 // 数据转换函数：将API响应数据格式转换为树组件需要的格式
 export const transformToTreeData = (node: TreeNodeResponse): TreeNode => {
   return {
-    key: node.id.toString(), // 转换为字符串
-    title: node.name, // 使用name而不是title
-    type: node.itemType === 'folder' ? 'folder' : 'file', // 使用itemType
+    key: node.id.toString(),
+    title: node.name,
+    type: node.itemType === 'folder' ? 'folder' : 'file', 
     isLeaf: node.itemType === 'document',
     children: node.children?.map(transformToTreeData),
-    lastModified: node.updated_time // 使用updated_time
+    lastModified: node.updated_time
   }
 };
 
@@ -214,7 +212,6 @@ export const loadChildNodes = async (parentKey: string): Promise<TreeNode[]> => 
   }
 };
 
-// ====== 其他功能函数 ======
 
 // 获取文档内容
 export const getDocumentContent = async (docId: string | number): Promise<string | null> => {
@@ -249,7 +246,7 @@ export const searchDocuments = async (keyword: string): Promise<TreeNode[]> => {
       const results: TreeNode[] = [];
       
       nodes.forEach(node => {
-        if (node.name.includes(keyword)) { // 使用name而不是title
+        if (node.name.includes(keyword)) {
           results.push(transformToTreeData(node));
         }
         

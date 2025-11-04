@@ -149,6 +149,9 @@
             <form @submit.prevent="handleRegister">
               <div class="form-group">
                 <input type="email" placeholder="邮箱" class="glass-input" v-model="registerForm.email" required>
+                <div class="email-tip">
+                  💡 当前仅支持 QQ 邮箱和 163 邮箱
+                </div>
               </div>
               <div class="form-group verification-group">
                 <input type="text" placeholder="验证码" class="glass-input verification-input" v-model="registerForm.code"
@@ -786,6 +789,31 @@ watch(loginType, () => {
 
 .form-group {
   margin-bottom: 20px;
+}
+
+// 邮箱提示样式
+.email-tip {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: rgba(59, 130, 246, 0.15); // 蓝色半透明背景
+  border-left: 3px solid rgba(59, 130, 246, 0.6);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 12px;
+  line-height: 1.5;
+  backdrop-filter: blur(10px);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 // 密码输入框组合（带显示/隐藏按钮）

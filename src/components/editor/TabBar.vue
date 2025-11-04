@@ -1,9 +1,4 @@
 <template>
-  <!-- 调试信息（临时） -->
-  <!-- <div class="debug-info" style="position: absolute; top: 0; right: 0; background: yellow; padding: 4px; font-size: 12px; z-index: 1000;">
-    标签数: {{ tabs.length }} | 活跃: {{ activeTabId }}
-  </div> -->
-  
   <div class="tab-bar" v-if="tabs.length > 0">
     <div class="tabs-container">
       <div         
@@ -40,11 +35,10 @@ import { useRouter } from 'vue-router'
 const tabsStore = useTabsStore()
 const router = useRouter()
 
-// 从store获取数据，不再需要props
+// 从store获取数据
 const tabs = computed(() => tabsStore.tabs)
 const activeTabId = computed(() => tabsStore.activeTabId)
 
-// 调试输出
 console.log('🏷️ TabBar组件已挂载')
 console.log('📊 当前标签数量:', tabs.value.length)
 console.log('📋 标签列表:', tabs.value)

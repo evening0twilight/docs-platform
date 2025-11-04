@@ -164,17 +164,17 @@ let isConnected = ref(false)
 // ⭐ 监听 documentId 变化，动态加入/离开文档房间
 watch(documentId, (newId, oldId) => {
   console.log('[EditorArea] documentId 变化:', { oldId, newId })
-  
+
   // 如果有旧文档，先离开
   if (oldId && collaboration) {
     console.log('[EditorArea] 离开旧文档:', oldId)
     socketService.leaveDocument(oldId)
   }
-  
+
   // 如果有新文档，加入
   if (newId) {
     console.log('[EditorArea] 准备加入新文档:', newId)
-    
+
     // 初始化协作功能（如果还没初始化）
     if (!collaboration) {
       collaboration = useCollaboration({
@@ -203,7 +203,7 @@ watch(documentId, (newId, oldId) => {
           }
         },
       })
-      
+
       onlineUsers = collaboration.onlineUsers
       isConnected = collaboration.isConnected
     } else {

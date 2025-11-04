@@ -61,17 +61,6 @@ const routes: RouteRecordRaw[] = [
       requiresAuth: true
     }
   },
-  // WebSocket 测试页面 (开发用)
-  {
-    path: '/socket-test',
-    name: 'SocketTest',
-    component: () => import('@/components/SocketTest.vue'),
-    meta: {
-      title: 'WebSocket 测试',
-      requiresAuth: true,
-      hideInMenu: true
-    }
-  },
   // 404页面
   {
     path: '/:pathMatch(.*)*',

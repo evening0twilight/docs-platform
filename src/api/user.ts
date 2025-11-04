@@ -79,9 +79,9 @@ export const resetPassword = async (data: ResetPasswordRequest): Promise<ResetPa
   }
 };
 
-// 上传头像API响应类型（响应拦截器会提取 data.data）
+// 上传头像API响应类型
 interface UploadAvatarResponse {
-  avatar: string;  // 响应拦截器返回的是 data.data 的内容
+  avatar: string;
 }
 
 // 上传头像API
@@ -89,8 +89,6 @@ export const uploadAvatar = async (file: File): Promise<UploadAvatarResponse> =>
   try {
     const formData = new FormData();
     formData.append('file', file);
-    
-    // 请求拦截器会自动处理 FormData，删除 Content-Type 让浏览器自动设置
     const response = await http.post<UploadAvatarResponse>('/users/avatar', formData);
     return response;
   } catch (error) {
@@ -128,8 +126,8 @@ export const verifyOldEmail = async (data: VerifyOldEmailRequest): Promise<Verif
 
 // 更换邮箱API请求类型
 interface ChangeEmailRequest {
-  newEmail: string;      // 新邮箱
-  newEmailCode: string;  // 新邮箱验证码
+  newEmail: string;
+  newEmailCode: string;
 }
 
 // 更换邮箱API响应类型
@@ -214,7 +212,7 @@ export const getUserInfo = async (): Promise<UserInfo> => {
 interface UpdateUserInfoRequest {
   username?: string;
   email?: string;
-  avatar?: string;  // 添加 avatar 字段
+  avatar?: string;
 }
 
 // 更新用户信息API
