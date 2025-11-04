@@ -1,6 +1,5 @@
 name: Deploy to Production
 
-# 触发条件:推送到 main 分支(通常是从 dev-pzj 合并过来)
 on:
   push:
     branches:

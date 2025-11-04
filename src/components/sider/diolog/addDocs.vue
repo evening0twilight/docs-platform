@@ -94,7 +94,7 @@ const { title, visible, name, description, selectedDirectory, loading, creatingI
 const treeData = ref<TreeNode[]>([]);
 const selectedKeys = ref<string[]>([]);
 const searchKeyword = ref('');
-const selectedPath = ref(''); // 改为直接存储路径字符串
+const selectedPath = ref('');
 
 // 获取并更新选中路径
 const updateSelectedPath = async (folderId: string) => {
@@ -105,7 +105,6 @@ const updateSelectedPath = async (folderId: string) => {
 
   try {
     const pathData = await getFolderPath(folderId);
-    // 使用breadcrumbs构建路径字符串
     const pathNames = pathData.breadcrumbs.map(item => item.name);
     selectedPath.value = pathNames.join(' / ');
   } catch (error) {
@@ -130,10 +129,6 @@ const loadRootData = async () => {
       console.error('文档树数据格式不正确:', response);
       treeData.value = [];
     }
-
-    // 选项2: 只加载根级别数据（需要后端支持）
-    // const response = await getFolderContents('root'); // 或者传null
-    // treeData.value = formatTreeData([...response.folders, ...response.documents]);
 
   } catch (error) {
     console.error('加载目录树失败:', error);
@@ -165,7 +160,7 @@ const formatTreeData = (data: any[]): TreeNode[] => {
       return {
         key: item.id ? item.id.toString() : Math.random().toString(),
         title: item.name || '未知',
-        isLeaf: false, // 文件夹永远不是叶子节点
+        isLeaf: false,
         parentId: item.parentId || null,
         children: item.children ? formatTreeData(item.children) : undefined
       };
@@ -177,16 +172,12 @@ const formatTreeData = (data: any[]): TreeNode[] => {
 const loadMore = async (node: TreeNode) => {
   try {
     console.log('动态加载节点:', node);
-    // 如果是文档类型，不需要加载子节点
     if (node.isLeaf) return;
 
-    // 使用专门的API获取文件夹内容
     const response = await getFolderContents(node.key);
 
-    // 只使用文件夹数据，不包括文档
     const children = formatTreeData(response.folders || []);
 
-    // 更新节点的children
     node.children = children;
 
     console.log('加载子节点成功:', children);
@@ -196,7 +187,7 @@ const loadMore = async (node: TreeNode) => {
   }
 };
 
-// 搜索功能（使用现有数据进行客户端搜索）
+// 搜索功能
 const onSearch = async (keyword: string) => {
   searchKeyword.value = keyword;
 

@@ -171,14 +171,13 @@ const getMarkState = (markType: string) => {
   
   if (hasStyle && !hasNoStyle) return 'full';      // 全部有
   if (hasStyle && hasNoStyle) return 'partial';    // 部分有
-  return 'none';                                    // 全部没有
+  return 'none';                                   // 全部没有
 };
 
 /**
- * 获取按钮的 class（支持三态）
+ * 获取按钮的 class（三态）
  */
 const getButtonClass = (markType: string, options?: any) => {
-  // 对于 heading 等需要参数的，仍使用 isActive
   if (options) {
     const isActive = props.editor?.isActive(markType, options);
     return {
@@ -216,10 +215,10 @@ const getButtonClass = (markType: string, options?: any) => {
   display: flex;
   align-items: center;
   padding: 0 0.5rem;
-  flex-wrap: nowrap; /* 不换行,保持在一行 */
+  flex-wrap: nowrap;
   gap: 8px;
   background: #fff;
-  white-space: nowrap; /* 防止内容换行 */
+  white-space: nowrap;
 }
 
 .toolContainer > div {
@@ -233,17 +232,17 @@ const getButtonClass = (markType: string, options?: any) => {
   background-color: #f0f0f0;
 }
 
-/* 完全激活状态 - 选区内所有文本都有该样式 */
+/* 完全激活状态 */
 .toolContainer > div.is-active {
   background-color: #1890ff;
   border: 1px solid #1890ff;
 }
 
 .toolContainer > div.is-active img {
-  filter: brightness(0) invert(1); /* 图标变白色 */
+  filter: brightness(0) invert(1);
 }
 
-/* 部分激活状态 - 选区内部分文本有该样式 */
+/* 部分激活状态 */
 .toolContainer > div.is-partial {
   background-color: #e6f4ff;
   border: 1px solid #91caff;
