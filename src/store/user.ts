@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { loginUser, getUserInfo } from '@/api/user'
 import type { UserInfo } from '@/components/type'
+import { socketService } from '@/services/socket'  // ⭐ 导入 socketService
 
 interface UserState {
   token: string
@@ -28,6 +29,12 @@ export const useUserStore = defineStore('user', {
     isLoggedIn: false
   }),
   
+  // ⭐ 配置持久化 - 使用 pinia-plugin-persistedstate
+  persist: {
+    key: 'user-store',  // 使用 'user-store' 作为 localStorage 的 key
+    storage: localStorage
+  },
+  
   getters: {
     hasToken: (state) => !!state.token,
     userInfo: (state) => ({
@@ -49,42 +56,7 @@ export const useUserStore = defineStore('user', {
       if (user.avatar !== undefined) this.avatar = user.avatar
       if (user.roles !== undefined) this.roles = user.roles
       if (user.isLoggedIn !== undefined) this.isLoggedIn = user.isLoggedIn
-      
-      // 保存到本地存储
-      this.saveToLocalStorage()
-    },
-    
-    // 保存到本地存储
-    saveToLocalStorage() {
-      const userState = {
-        token: this.token,
-        id: this.id,  // ⭐ 保存 id
-        name: this.name,
-        email: this.email,
-        avatar: this.avatar,
-        roles: this.roles,
-        isLoggedIn: this.isLoggedIn
-      }
-      localStorage.setItem('user-store', JSON.stringify(userState))
-    },
-    
-    // 从本地存储加载
-    loadFromLocalStorage() {
-      const stored = localStorage.getItem('user-store')
-      if (stored) {
-        try {
-          const userState = JSON.parse(stored)
-          this.token = userState.token || ''
-          this.id = userState.id || ''  // ⭐ 加载 id
-          this.name = userState.name || ''
-          this.email = userState.email || ''
-          this.avatar = userState.avatar || ''
-          this.roles = userState.roles || []
-          this.isLoggedIn = userState.isLoggedIn || false
-        } catch (error) {
-          console.error('加载用户信息失败:', error)
-        }
-      }
+      // ⭐ 不再需要手动保存，Pinia 持久化插件会自动处理
     },
     
     // 设置token
@@ -92,12 +64,13 @@ export const useUserStore = defineStore('user', {
       this.token = token
       this.isLoggedIn = !!token
       
-      // 保存到本地存储
+      // ⭐ 同时保存到单独的 token key，供 API 拦截器使用
       if (token) {
         localStorage.setItem('token', token)
       } else {
         localStorage.removeItem('token')
       }
+      // Pinia 持久化插件也会自动保存到 'user-store'
     },
     
     // 登录
@@ -151,6 +124,10 @@ export const useUserStore = defineStore('user', {
           
           console.log('登录成功，token:', token)
           console.log('用户信息:', { name: displayName, email: userInfo?.email })
+          
+          // ⭐ 登录成功后，初始化 WebSocket 连接
+          this.initWebSocket()
+          
           return { success: true, data: response }
         } else {
           throw new Error('未获取到有效的认证信息')
@@ -201,21 +178,51 @@ export const useUserStore = defineStore('user', {
       this.avatar = ''
       this.roles = []
       this.isLoggedIn = false
-      
-      // 清除本地存储
+      // ⭐ Pinia 持久化插件会自动清除 'user-store'
+      // 但我们仍然需要清除旧的 token 键（如果存在）
       localStorage.removeItem('token')
-      localStorage.removeItem('user-store')
       sessionStorage.removeItem('token')
+      
+      // ⭐ 登出时断开 WebSocket
+      if (socketService.socket?.connected) {
+        socketService.disconnect()
+      }
+    },
+    
+    // 初始化 WebSocket 连接
+    initWebSocket() {
+      const SOCKET_URL = import.meta.env.VITE_SOCKET_URL
+      if (!SOCKET_URL) {
+        console.warn('[UserStore] 未配置 VITE_SOCKET_URL')
+        return
+      }
+      
+      // 只有在已登录且有用户 ID 的情况下才连接
+      if (this.hasToken && this.id) {
+        console.log('[UserStore] 🔌 初始化 WebSocket 连接')
+        console.log('[UserStore] 用户信息:', { 
+          id: this.id, 
+          name: this.name, 
+          token: this.token ? '存在' : '不存在' 
+        })
+        
+        socketService.connect(SOCKET_URL, this.token)
+      } else {
+        console.warn('[UserStore] ⚠️ 用户未登录或缺少 ID，跳过 WebSocket 连接')
+      }
     },
     
     // 初始化用户状态（从本地存储恢复）
     initUserState() {
-      // 先从本地存储加载用户信息
-      this.loadFromLocalStorage()
-      
+      // ⭐ Pinia 持久化插件会自动从 localStorage 恢复状态
       // 如果有token，尝试获取最新的用户信息
       if (this.token) {
         this.fetchUserInfo()
+        
+        // ⭐ 如果已经有完整的用户信息（包括 ID），初始化 WebSocket
+        if (this.id) {
+          this.initWebSocket()
+        }
       }
     }
   }

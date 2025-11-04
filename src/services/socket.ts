@@ -50,7 +50,7 @@ export interface TypingStatus {
 // ============ Socket 服务类 ============
 
 class SocketService {
-  private socket: Socket | null = null
+  public socket: Socket | null = null  // ⭐ 改为 public 以便外部访问
   private currentDocumentId: string | null = null
 
   // 响应式状态
@@ -84,28 +84,47 @@ class SocketService {
   }
 
   /**
+   * 断开 WebSocket 连接
+   */
+  disconnect() {
+    if (this.socket) {
+      console.log('[Socket] 🔌 断开连接')
+      this.socket.disconnect()
+      this.socket = null
+      this.isConnected.value = false
+      this.isAuthenticated.value = false
+      this.onlineUsers.value = []
+      this.currentUser.value = null
+      this.currentDocumentId = null
+    }
+  }
+
+  /**
    * 设置所有事件监听器
    */
   private setupEventListeners() {
     if (!this.socket) return
 
-    // ====== 连接事件 ======
-    this.socket.on('connected', (data) => {
-      console.log('[Socket] ✅ 连接成功:', data)
+    // ====== 1. Socket 原生连接事件 ======
+    this.socket.on('connect', () => {
+      console.log('[Socket] ✅ Socket 连接成功')
+      console.log('[Socket] Socket ID:', this.socket?.id)
       this.isConnected.value = true
+    })
+
+    // ====== 2. 收到后端 connected 事件 ======
+    this.socket.on('connected', (data) => {
+      console.log('[Socket] ✅ 收到 connected 事件:', data)
       
-      // ⭐ 连接成功后，如果有用户信息，立即进行身份认证
+      // ⭐ 连接成功后，立即进行身份认证
       const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-      // ⭐ 修复：从 user-store 读取用户信息
       const userStoreStr = localStorage.getItem('user-store') || sessionStorage.getItem('user-store')
       
       if (token && userStoreStr) {
         try {
           const userStore = JSON.parse(userStoreStr)
-          console.log('[Socket] 🔐 自动进行身份认证...')
-          console.log('[Socket] 用户信息:', userStore)
+          console.log('[Socket] 🔐 发送身份认证...')
           
-          // ⭐ 使用 userStore 中的字段
           const userId = userStore.id?.toString() || 'guest-' + Date.now()
           const username = userStore.name || '访客'
           const avatar = userStore.avatar || ''
@@ -122,58 +141,49 @@ class SocketService {
       }
     })
 
-    this.socket.on('connect_error', (error) => {
-      console.error('[Socket] ❌ 连接失败:', error.message)
-      this.isConnected.value = false
-      
-      // 检查是否是认证错误
-      if (error.message.includes('unauthorized') || error.message.includes('401')) {
-        console.warn('[Socket] Token 无效，可能需要重新登录')
-        // 可以触发跳转到登录页
-        // window.location.href = '/login'
-      }
-    })
-
-    this.socket.on('disconnect', (reason) => {
-      console.log('[Socket] 断开连接:', reason)
-      this.isConnected.value = false
-      this.isAuthenticated.value = false
-      this.onlineUsers.value = []
-    })
-
-    // ====== 认证事件 ======
+    // ====== 3. 认证成功事件 ======
     this.socket.on('authenticated', (data) => {
-      console.log('[Socket] ✅ 身份验证成功:', data)
+      console.log('[Socket] ✅ 认证成功:', data)
       this.isAuthenticated.value = true
       this.currentUser.value = {
         userId: data.userId,
         username: data.username,
         socketId: data.socketId,
+        avatar: data.avatar,
         color: data.color,
       }
       
       // ⭐ 认证成功后，如果有待加入的文档，立即加入
       if (this.currentDocumentId) {
         console.log('[Socket] 📄 认证成功，自动加入文档:', this.currentDocumentId)
-        this.socket?.emit('join-document', { documentId: this.currentDocumentId })
+        this.joinDocument(this.currentDocumentId)
       }
     })
 
-    // ====== 文档房间事件 ======
+    // ====== 4. 文档房间事件 ======
     this.socket.on('joined-document', (data) => {
-      console.log('[Socket] ✅ 成功加入文档:', data)
-      console.log('[Socket] 📋 当前在线用户:', data.users)
+      console.log('[Socket] ✅ 加入文档房间成功:', data)
+      console.log('[Socket] 当前在线用户:', data.users)
+      
       // ⭐ 关键: 设置初始在线用户列表
-      this.onlineUsers.value = data.users || []
+      if (data.users && Array.isArray(data.users)) {
+        this.onlineUsers.value = data.users
+        console.log('[Socket] 📋 在线用户列表已更新，共', data.users.length, '人')
+      } else {
+        console.warn('[Socket] ⚠️ joined-document 事件未返回 users 数组')
+        this.onlineUsers.value = []
+      }
     })
 
     this.socket.on('left-document', (data) => {
       console.log('[Socket] 已离开文档:', data)
       this.onlineUsers.value = []
+      this.currentDocumentId = null
     })
 
     this.socket.on('user-joined', (data) => {
       console.log('[Socket] 👤 新用户加入:', data)
+      
       // 添加新用户到在线列表（避免重复）
       const exists = this.onlineUsers.value.find(u => u.userId === data.userId)
       if (!exists) {
@@ -184,18 +194,46 @@ class SocketService {
           color: data.color,
           socketId: data.socketId,
         })
+        console.log('[Socket] 在线用户 +1，当前:', this.onlineUsers.value.length, '人')
+      } else {
+        console.log('[Socket] 用户已在列表中，跳过重复添加')
       }
     })
 
     this.socket.on('user-left', (data) => {
-      console.log('[Socket] 用户离开:', data)
+      console.log('[Socket] 👋 用户离开:', data)
+      
       // 从在线列表中移除用户
+      const beforeCount = this.onlineUsers.value.length
       this.onlineUsers.value = this.onlineUsers.value.filter(
         u => u.userId !== data.userId
       )
+      const afterCount = this.onlineUsers.value.length
+      
+      if (beforeCount !== afterCount) {
+        console.log('[Socket] 在线用户 -1，当前:', afterCount, '人')
+      }
     })
 
-    // ====== 重连事件 ======
+    // ====== 5. 连接错误和断开事件 ======
+    this.socket.on('connect_error', (error) => {
+      console.error('[Socket] ❌ 连接错误:', error.message)
+      this.isConnected.value = false
+      
+      // 检查是否是认证错误
+      if (error.message.includes('unauthorized') || error.message.includes('401')) {
+        console.warn('[Socket] Token 无效，可能需要重新登录')
+      }
+    })
+
+    this.socket.on('disconnect', (reason) => {
+      console.log('[Socket] ❌ 连接断开:', reason)
+      this.isConnected.value = false
+      this.isAuthenticated.value = false
+      this.onlineUsers.value = []
+      this.currentDocumentId = null
+    })
+
     this.socket.on('reconnect', (attemptNumber) => {
       console.log(`[Socket] 重连成功 (尝试 ${attemptNumber} 次)`)
       
@@ -224,6 +262,15 @@ class SocketService {
     // ====== 错误事件 ======
     this.socket.on('error', (error) => {
       console.error('[Socket] 错误:', error)
+    })
+
+    // ====== 调试: 监听所有事件 ======
+    this.socket.onAny((eventName: string, ...args: any[]) => {
+      console.log('[Socket] 📥 收到事件:', eventName, args)
+    })
+
+    this.socket.onAnyOutgoing((eventName: string, ...args: any[]) => {
+      console.log('[Socket] 📤 发送事件:', eventName, args)
     })
   }
 
@@ -380,22 +427,6 @@ class SocketService {
       return
     }
     this.socket.emit(event, data)
-  }
-
-  /**
-   * 断开连接
-   */
-  disconnect() {
-    if (this.socket) {
-      console.log('[Socket] 断开连接')
-      this.socket.disconnect()
-      this.socket = null
-      this.isConnected.value = false
-      this.isAuthenticated.value = false
-      this.onlineUsers.value = []
-      this.currentUser.value = null
-      this.currentDocumentId = null
-    }
   }
 
   /**

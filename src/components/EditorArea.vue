@@ -85,6 +85,7 @@ import EmptyState from './EmptyState.vue';
 import OnlineUsers from './OnlineUsers.vue';
 import ShareDialog from './sider/diolog/shareDialog.vue';
 import { useCollaboration } from '@/composables/useCollaboration'
+import { socketService } from '@/services/socket'  // ⭐ 导入 socketService
 import { Message } from '@arco-design/web-vue'
 
 // 定义props（支持路由参数）
@@ -118,40 +119,7 @@ const {
   // editor
 } = toRefs(state);
 
-// WebSocket 协作功能（只在有文档ID时启用）
-const collaboration = computed(() => {
-  if (!documentId.value) return null
-
-  return useCollaboration({
-    documentId: documentId.value,
-
-    // 接收远程编辑
-    onRemoteEdit: (edit) => {
-      console.log('[Editor] 收到远程编辑:', edit)
-      applyRemoteEdit(edit)
-    },
-
-    // 接收远程光标（可选，暂时只打印日志）
-    onRemoteCursor: (cursor) => {
-      console.log('[Editor] 远程光标:', cursor)
-      // TODO: 渲染远程用户光标
-    },
-
-    // 接收选区变化（可选）
-    onRemoteSelection: (selection) => {
-      console.log('[Editor] 远程选区:', selection)
-      // TODO: 高亮远程用户选区
-    },
-
-    // 接收输入状态
-    onUserTyping: (typing) => {
-      if (typing.isTyping) {
-        console.log(`[Editor] ${typing.username} 正在输入...`)
-        // TODO: 显示输入指示器
-      }
-    },
-  })
-})
+// ====== WebSocket 协作功能 ======
 
 // 应用远程编辑到编辑器
 const applyRemoteEdit = (edit: any) => {
@@ -188,10 +156,67 @@ const applyRemoteEdit = (edit: any) => {
   }
 }
 
+// ⭐ 在有 documentId 时初始化协作功能
+let collaboration: ReturnType<typeof useCollaboration> | null = null
+let onlineUsers = ref([])
+let isConnected = ref(false)
+
+// ⭐ 监听 documentId 变化，动态加入/离开文档房间
+watch(documentId, (newId, oldId) => {
+  console.log('[EditorArea] documentId 变化:', { oldId, newId })
+  
+  // 如果有旧文档，先离开
+  if (oldId && collaboration) {
+    console.log('[EditorArea] 离开旧文档:', oldId)
+    socketService.leaveDocument(oldId)
+  }
+  
+  // 如果有新文档，加入
+  if (newId) {
+    console.log('[EditorArea] 准备加入新文档:', newId)
+    
+    // 初始化协作功能（如果还没初始化）
+    if (!collaboration) {
+      collaboration = useCollaboration({
+        documentId: newId,
+
+        // 接收远程编辑
+        onRemoteEdit: (edit) => {
+          console.log('[Editor] 收到远程编辑:', edit)
+          applyRemoteEdit(edit)
+        },
+
+        // 接收远程光标（可选，暂时只打印日志）
+        onRemoteCursor: (cursor) => {
+          console.log('[Editor] 远程光标:', cursor)
+        },
+
+        // 接收选区变化（可选）
+        onRemoteSelection: (selection) => {
+          console.log('[Editor] 远程选区:', selection)
+        },
+
+        // 接收输入状态
+        onUserTyping: (typing) => {
+          if (typing.isTyping) {
+            console.log(`[Editor] ${typing.username} 正在输入...`)
+          }
+        },
+      })
+      
+      onlineUsers = collaboration.onlineUsers
+      isConnected = collaboration.isConnected
+    } else {
+      // 已经初始化过，直接加入新文档
+      socketService.joinDocument(newId)
+    }
+  }
+}, { immediate: true })  // ⭐ immediate: true 确保首次加载时就执行
+
 // 广播编辑操作（节流，避免过于频繁）
 let broadcastTimer: number | null = null
 const broadcastEdit = () => {
-  if (!collaboration.value || !editor.value || !documentId.value) return
+  if (!collaboration || !editor.value || !documentId.value) return
 
   // 节流：300ms 内只发送一次
   if (broadcastTimer) {
@@ -200,9 +225,9 @@ const broadcastEdit = () => {
 
   broadcastTimer = setTimeout(() => {
     const content = editor.value?.getHTML()
-    if (!content || !collaboration.value || !documentId.value) return
+    if (!content || !collaboration || !documentId.value) return
 
-    collaboration.value.sendEdit({
+    collaboration.sendEdit({
       documentId: documentId.value,
       type: 'replace', // 简单模式：完全替换内容
       content: content,
@@ -268,7 +293,7 @@ const editor = useEditor({
     handleContentChange()
 
     // 如果不是远程更新，则广播编辑操作
-    if (!isRemoteUpdate.value && collaboration.value && documentId.value) {
+    if (!isRemoteUpdate.value && collaboration && documentId.value) {
       broadcastEdit()
     }
   },
@@ -277,10 +302,10 @@ const editor = useEditor({
     // Vue 会自动检测到 editor 的状态变化
 
     // 广播光标位置（可选，需要转换为行列位置）
-    if (collaboration.value && editor && documentId.value) {
+    if (collaboration && editor && documentId.value) {
       // TODO: 实现光标位置计算和广播
       // const position = calculateCursorPosition(editor)
-      // collaboration.value.sendCursor(position)
+      // collaboration.sendCursor(position)
     }
   }
 })
