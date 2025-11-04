@@ -8,12 +8,13 @@
         <a-layout-header style="padding-left: 20px" class="h-[36px] w-full">
           <TabBar />
         </a-layout-header>
-        <a-layout style="padding: 0 24px" class="h-full w-full">
+        <a-layout class="h-full w-full content-layout">
+        <!-- <a-layout style="padding: 0 24px" class="h-full w-full">
           <a-breadcrumb :style="{ margin: '4px 0' }">
             <a-breadcrumb-item v-for="item in breadcrumbItems" :key="item.id">
               {{ item.name }}
             </a-breadcrumb-item>
-          </a-breadcrumb>
+          </a-breadcrumb> -->
           <a-layout-content class="w-full h-full">
             <router-view v-slot="{ Component, route }">
               <keep-alive>
@@ -114,7 +115,7 @@ onMounted(() => {
     router.push('/login')
     return
   }
-  
+
   // 修复可能存在的错误标签路由
   tabsStore.fixAllTabRoutes()
 })
@@ -176,6 +177,26 @@ const handleLogout = () => {
   font-weight: 400;
   font-size: 14px;
   background: var(--color-bg-3);
+  overflow: hidden;
+  /* 防止内容溢出 */
+  height: 100%;
+}
+
+/* 确保内容布局正确计算高度 */
+.content-layout {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0 24px;
+  /* 移到这里，避免影响高度计算 */
+}
+
+.content-layout :deep(.arco-layout-content) {
+  flex: 1;
+  /* 占据剩余空间 */
+  min-height: 0;
+  /* 允许flex子元素缩小 */
+  overflow: hidden;
 }
 
 .layout-demo :deep(.arco-layout-footer),

@@ -695,18 +695,20 @@ onBeforeUnmount(() => {
 
 .editorContainer :deep(.ProseMirror) {
   width: 100%;
-  height: calc(100vh - 240px);
+  height: calc(100vh - 212px);
   border: 1px black solid;
   border-radius: 10px;
   display: block;
   box-sizing: border-box;
-  overflow-y: hidden;
+  overflow-y: auto;
+  /* 编辑器内容可滚动 */
+  overflow-x: hidden;
+  /* 隐藏横向滚动 */
   align-items: flex-start !important;
   justify-content: flex-start !important;
   text-align: left !important;
   margin: 0 !important;
   padding: 10px 5px 10px 5px !important;
-  overflow: auto;
 }
 
 /* 列表样式 */
