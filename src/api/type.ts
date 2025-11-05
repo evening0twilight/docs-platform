@@ -6,6 +6,8 @@ export interface TreeNode {
   children?: TreeNode[]
   isLeaf?: boolean
   lastModified?: string
+  isPinned?: boolean
+  sortOrder?: number  // 添加 sortOrder 字段
 }
 
 // 定义文档内容类型

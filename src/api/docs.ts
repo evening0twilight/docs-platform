@@ -34,6 +34,7 @@ interface DocumentResponse {
   creatorId: number;
   visibility: 'public' | 'private';
   isDeleted: boolean;
+  isPinned?: boolean;
   permission?: 'owner' | 'editor' | 'viewer';
   children?: DocumentResponse[];
   created_time: string;
@@ -172,6 +173,8 @@ export const transformToTreeData = (node: TreeNodeResponse): TreeNode => {
     title: node.name,
     type: node.itemType === 'folder' ? 'folder' : 'file', 
     isLeaf: node.itemType === 'document',
+    isPinned: node.sortOrder < 0,  // sortOrder < 0 表示已置顶
+    sortOrder: node.sortOrder,
     children: node.children?.map(transformToTreeData),
     lastModified: node.updated_time
   }
@@ -308,6 +311,81 @@ export const getSharedDocuments = async (params?: {
     return response
   } catch (error) {
     console.error('获取分享文档失败:', error)
+    throw error
+  }
+}
+
+/**
+ * 置顶/取消置顶文档
+ * @param documentId 文档ID
+ * @param isPinned true=置顶, false=取消置顶
+ */
+export const toggleDocumentPin = async (documentId: number, isPinned: boolean): Promise<any> => {
+  try {
+    const token = localStorage.getItem('token')
+    const url = `http://165.227.56.186:3000/api/documents/${documentId}`
+    const requestBody = {
+      isPinned: isPinned
+    }
+    
+    console.log('[API] 置顶请求:', {
+      url,
+      documentId,
+      isPinned,
+      requestBody,
+      token: token ? '已设置' : '未设置'
+    });
+    
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(requestBody)
+    })
+    
+    const result = await response.json()
+    console.log('[API] 置顶响应:', {
+      status: response.status,
+      ok: response.ok,
+      result
+    });
+    
+    // 检查响应状态和返回的 success 字段
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || result.error || '置顶操作失败')
+    }
+    
+    return result
+  } catch (error) {
+    console.error('[API] 切换置顶状态失败:', error)
+    throw error
+  }
+}
+
+/**
+ * 重命名文档
+ */
+export const renameDocument = async (documentId: number, newName: string): Promise<DocumentResponse> => {
+  try {
+    const response = await http.patch(`/documents/${documentId}/rename`, { name: newName })
+    return response
+  } catch (error) {
+    console.error('重命名文档失败:', error)
+    throw error
+  }
+}
+
+/**
+ * 移动文档到其他文件夹
+ */
+export const moveDocument = async (documentId: number, targetFolderId: number | null): Promise<DocumentResponse> => {
+  try {
+    const response = await http.patch(`/documents/${documentId}/move`, { parentId: targetFolderId })
+    return response
+  } catch (error) {
+    console.error('移动文档失败:', error)
     throw error
   }
 }

@@ -73,7 +73,7 @@
         <div v-show="sharedDocsExpanded" class="section-content">
           <!-- 加载状态 -->
           <div v-if="sharedDocsLoading" class="loading-state">
-            <a-spin size="small" />
+            <a-spin :size="20" />
             <span class="loading-text">加载中...</span>
           </div>
           <!-- 分享文档列表 -->
