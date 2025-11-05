@@ -24,7 +24,11 @@
           <div v-if="collaboration" class="online-status">
             <span :class="['status-dot', collaboration.isConnected.value ? 'connected' : 'disconnected']"></span>
             <span class="status-text">
-              {{ collaboration.isConnected.value ? `${collaboration.onlineUsers.value.length} 人在线` : '离线' }}
+              {{ 
+                collaboration.isConnected.value 
+                  ? (collaboration.onlineUsers.value.length === 1 ? '在线' : `${collaboration.onlineUsers.value.length} 人在线`)
+                  : '离线' 
+              }}
             </span>
           </div>
         </div>
@@ -49,8 +53,8 @@
       </template>
     </div>
 
-    <!-- 在线用户侧边栏（仅在有在线用户时显示） -->
-    <div v-if="collaboration && documentId && collaboration.onlineUsers.value.length > 0" class="online-users-sidebar"
+    <!-- 在线用户侧边栏（仅在有其他在线用户时显示，不包括自己） -->
+    <div v-if="collaboration && documentId && collaboration.onlineUsers.value.length > 1" class="online-users-sidebar"
       :class="{ collapsed: sidebarCollapsed }">
       <!-- 折叠按钮始终可见 -->
       <div class="sidebar-toggle" @click="sidebarCollapsed = !sidebarCollapsed"
