@@ -24,10 +24,10 @@
           <div v-if="collaboration" class="online-status">
             <span :class="['status-dot', collaboration.isConnected.value ? 'connected' : 'disconnected']"></span>
             <span class="status-text">
-              {{ 
-                collaboration.isConnected.value 
+              {{
+                collaboration.isConnected.value
                   ? (collaboration.onlineUsers.value.length === 1 ? '在线' : `${collaboration.onlineUsers.value.length} 人在线`)
-                  : '离线' 
+                  : '离线'
               }}
             </span>
           </div>

@@ -24,6 +24,7 @@
           <div class="node-actions">
             <!-- 置顶按钮 -->
             <a-button type="text" size="mini" class="action-btn pin-btn" :class="{ 'pinned': nodeData?.isPinned }"
+              :loading="pinningNodes.has(nodeData?.key)" :disabled="pinningNodes.has(nodeData?.key)"
               @click.stop="handlePinToggle(nodeData)" :title="nodeData?.isPinned ? '取消置顶' : '置顶'">
               📌
             </a-button>
@@ -55,6 +56,12 @@
       <div class="text-lg mb-2">暂无文档</div>
       <div class="text-sm">请先创建一些文档</div>
     </div>
+
+    <!-- 重命名弹窗 -->
+    <RenameDiodig ref="renameDialogRef" @success="fetchDocuments" />
+
+    <!-- 移动弹窗 -->
+    <RemoveDiodig ref="moveDialogRef" @success="fetchDocuments" />
   </div>
 </template>
 
@@ -63,12 +70,15 @@
 * @description 
 */
 import { ref, onMounted, reactive, toRefs, computed, watch } from 'vue';
-import { getDocumentTree, searchDocuments, loadChildNodes, transformToTreeData, toggleDocumentPin, renameDocument, moveDocument } from '@/api/docs'
+import { getDocumentTree, searchDocuments, loadChildNodes, transformToTreeData, toggleDocumentPin, deleteDocument } from '@/api/docs'
 import { Modal, Message } from '@arco-design/web-vue';
 import { IconEdit, IconFolder, IconDelete } from '@arco-design/web-vue/es/icon';
 // 导入图标
 import folderIcon from '@/assets/文件夹.svg';
 import documentIcon from '@/assets/文章.svg';
+// 导入弹窗组件
+import RenameDiodig from './diolog/RenameDiodig.vue';
+import RemoveDiodig from './diolog/RemoveDiodig.vue';
 
 // 定义组件发射的事件
 const emit = defineEmits<{
@@ -203,10 +213,8 @@ const handleNodeSelect = async (selectedKeys: string[], info: any) => {
 const rawData = ref<any[]>([])
 const loading = ref(false)
 
-// 移动对话框状态
-const moveDialogVisible = ref(false);
-const moveTargetNode = ref<any>(null);
-const moveTargetFolder = ref<string>('');
+// 记录正在置顶操作的节点
+const pinningNodes = ref<Set<string>>(new Set());
 
 // 获取文档树数据
 const fetchDocuments = async () => {
@@ -353,9 +361,15 @@ const fetchChildren = async (parentKey) => {
 const handlePinToggle = async (node: any) => {
   try {
     const docId = parseInt(node.key);
+
+    // 防止重复点击
+    if (pinningNodes.value.has(node.key)) {
+      return;
+    }
+
     // sortOrder < 0 表示已置顶，>= 0 表示未置顶
     const isCurrentlyPinned = (node.sortOrder !== undefined && node.sortOrder < 0) || node.isPinned;
-    
+
     console.log('[置顶] 准备置顶文档:', {
       docId,
       node,
@@ -366,12 +380,15 @@ const handlePinToggle = async (node: any) => {
       isCurrentlyPinned,
       willSetTo: !isCurrentlyPinned
     });
-    
+
+    // 添加到加载集合
+    pinningNodes.value.add(node.key);
+
     // 如果当前是置顶状态，传 false 取消置顶
     // 如果当前未置顶，传 true 进行置顶
     const result = await toggleDocumentPin(docId, !isCurrentlyPinned);
     console.log('[置顶] 置顶成功:', result);
-    
+
     Message.success(isCurrentlyPinned ? '已取消置顶' : '已置顶');
     // 刷新文档树
     await fetchDocuments();
@@ -380,143 +397,57 @@ const handlePinToggle = async (node: any) => {
     // 显示具体的错误信息
     const errorMessage = error?.message || '操作失败，请重试';
     Message.error(errorMessage);
+  } finally {
+    // 从加载集合移除
+    pinningNodes.value.delete(node.key);
   }
 };
 
+// 弹窗组件引用
+const renameDialogRef = ref();
+const moveDialogRef = ref();
+
 // 处理重命名
-const handleRename = async (node: any) => {
-  Modal.open({
-    title: '重命名',
-    modalClass: 'rename-modal',
-    content: `<input id="rename-input" class="arco-input" type="text" value="${node.title}" style="width: 100%;" />`,
-    onBeforeOk: async () => {
-      const input = document.getElementById('rename-input') as HTMLInputElement;
-      const newName = input?.value.trim();
-
-      if (!newName) {
-        Message.warning('名称不能为空');
-        return false;
-      }
-
-      if (newName === node.title) {
-        return true;
-      }
-
-      try {
-        const docId = parseInt(node.key);
-        await renameDocument(docId, newName);
-        Message.success('重命名成功');
-        await fetchDocuments();
-        return true;
-      } catch (error) {
-        console.error('重命名失败:', error);
-        Message.error('重命名失败，请重试');
-        return false;
-      }
-    }
+const handleRename = (node: any) => {
+  const itemType = node.type === 'folder' ? 'folder' : 'document';
+  renameDialogRef.value?.openDialog({
+    id: parseInt(node.key),
+    name: node.title,
+    type: itemType
   });
 };
 
 // 处理移动
-const handleMove = async (node: any) => {
-  moveTargetNode.value = node;
-  moveTargetFolder.value = '';
-  
-  // 创建包含树形选择器的模态框
-  const modal = Modal.open({
-    title: '移动到',
-    modalClass: 'move-document-modal',
-    width: 500,
-    content: () => {
-      // 需要使用 Vue 的 h 函数来创建组件
-      return `
-        <div style="padding: 10px 0;">
-          <div style="margin-bottom: 8px; color: #666;">选择目标文件夹（留空表示移到根目录）：</div>
-          <div id="tree-select-container"></div>
-        </div>
-      `;
-    },
-    onBeforeOk: async () => {
-      const selectedFolder = moveTargetFolder.value;
-      const parentId = selectedFolder ? parseInt(selectedFolder) : null;
-
-      try {
-        const docId = parseInt(node.key);
-        await moveDocument(docId, parentId);
-        Message.success('移动成功');
-        await fetchDocuments();
-        return true;
-      } catch (error) {
-        console.error('移动失败:', error);
-        Message.error('移动失败，请重试');
-        return false;
-      }
-    },
-    onOpen: () => {
-      // 模态框打开后，手动渲染树形选择器
-      setTimeout(() => {
-        const container = document.getElementById('tree-select-container');
-        if (container) {
-          // 使用原生 DOM 创建简单的选择框
-          const select = document.createElement('select');
-          select.id = 'folder-select';
-          select.className = 'arco-select';
-          select.style.width = '100%';
-          select.style.padding = '8px';
-          select.style.border = '1px solid #e5e7eb';
-          select.style.borderRadius = '4px';
-          
-          // 添加根目录选项
-          const rootOption = document.createElement('option');
-          rootOption.value = '';
-          rootOption.textContent = '根目录';
-          select.appendChild(rootOption);
-          
-          // 递归添加文件夹选项
-          const addFolderOptions = (nodes: any[], prefix = '') => {
-            nodes.forEach((n: any) => {
-              if (n.type === 'folder' && n.key !== node.key) {
-                const option = document.createElement('option');
-                option.value = n.key;
-                option.textContent = prefix + n.title;
-                select.appendChild(option);
-                
-                if (n.children) {
-                  addFolderOptions(n.children, prefix + '　');
-                }
-              }
-            });
-          };
-          
-          addFolderOptions(treeData.value);
-          
-          select.onchange = (e) => {
-            moveTargetFolder.value = (e.target as HTMLSelectElement).value;
-          };
-          
-          container.appendChild(select);
-        }
-      }, 100);
-    }
+const handleMove = (node: any) => {
+  const itemType = node.type === 'folder' ? 'folder' : 'document';
+  moveDialogRef.value?.openDialog({
+    id: parseInt(node.key),
+    name: node.title,
+    type: itemType
   });
 };
 
 // 处理删除
 const handleDelete = async (node: any) => {
+  const itemType = node.type === 'folder' ? '文件夹' : '文档';
   Modal.confirm({
     title: '确认删除',
-    content: `确定要删除"${node.title}"吗？此操作不可恢复。`,
+    content: `确定要删除${itemType}"${node.title}"吗？此操作不可恢复。`,
+    okText: '确认删除',
+    cancelText: '取消',
+    okButtonProps: {
+      status: 'danger'
+    },
     onOk: async () => {
       try {
-        // 这里需要添加删除API，暂时只显示提示
-        Message.info('删除功能待实现');
-        // const { deleteDocument } = await import('@/api/docs');
-        // await deleteDocument(node.key);
-        // Message.success('删除成功');
-        // await fetchDocuments();
-      } catch (error) {
+        const docId = parseInt(node.key);
+        await deleteDocument(docId);
+        Message.success('删除成功');
+        await fetchDocuments();
+      } catch (error: any) {
         console.error('删除失败:', error);
-        Message.error('删除失败，请重试');
+        const errorMessage = error?.message || '删除失败，请重试';
+        Message.error(errorMessage);
       }
     }
   });
@@ -535,8 +466,10 @@ defineExpose({
 <style scoped>
 /* 文档树容器 */
 .docsContainer {
-  overflow-x: hidden; /* 隐藏横向滚动条 */
-  overflow-y: auto; /* 保留纵向滚动 */
+  overflow-x: hidden;
+  /* 隐藏横向滚动条 */
+  overflow-y: auto;
+  /* 保留纵向滚动 */
 }
 
 /* 树节点图标样式 */
@@ -590,11 +523,13 @@ defineExpose({
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  max-width: 100%; /* 防止超出容器 */
+  max-width: 100%;
+  /* 防止超出容器 */
   padding: 2px 4px;
   border-radius: 4px;
   transition: background-color 0.2s;
-  overflow: hidden; /* 防止内容溢出 */
+  overflow: hidden;
+  /* 防止内容溢出 */
 }
 
 /* 置顶文档样式 */
@@ -616,11 +551,14 @@ defineExpose({
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  min-width: 0; /* 确保 flex 子项可以正确收缩 */
-  max-width: 100%; /* 限制最大宽度 */
+  min-width: 0;
+  /* 确保 flex 子项可以正确收缩 */
+  max-width: 100%;
+  /* 限制最大宽度 */
   color: var(--color-text-1);
   font-size: 14px;
-  word-break: break-all; /* 如果需要换行时从单词中间断开 */
+  word-break: break-all;
+  /* 如果需要换行时从单词中间断开 */
 }
 
 /* 操作按钮容器 */
@@ -689,12 +627,12 @@ defineExpose({
   #tree-select-container {
     min-height: 40px;
   }
-  
+
   #folder-select {
     font-size: 14px;
     cursor: pointer;
   }
-  
+
   #folder-select option {
     padding: 8px;
   }

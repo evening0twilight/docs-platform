@@ -321,14 +321,114 @@ defineExpose({
 </script>
 
 <style scoped>
+.addDocsContainer :deep(.arco-modal) {
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.addDocsContainer :deep(.arco-modal-header) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 20px 24px;
+  border-bottom: none;
+}
+
+.addDocsContainer :deep(.arco-modal-title) {
+  color: white;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.addDocsContainer :deep(.arco-modal-close-icon) {
+  color: white;
+}
+
+.addDocsContainer :deep(.arco-modal-body) {
+  padding: 24px;
+}
+
+.addDocsContainer :deep(.arco-input) {
+  border-radius: 8px;
+  border: 1px solid #e5e6eb;
+  transition: all 0.3s;
+}
+
+.addDocsContainer :deep(.arco-input:hover) {
+  border-color: #667eea;
+}
+
+.addDocsContainer :deep(.arco-input:focus) {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.addDocsContainer :deep(.arco-tree-select) {
+  border-radius: 8px;
+}
+
+.addDocsContainer :deep(.arco-select-view) {
+  border-radius: 8px;
+  border: 1px solid #e5e6eb;
+  transition: all 0.3s;
+}
+
+.addDocsContainer :deep(.arco-select-view:hover) {
+  border-color: #667eea;
+}
+
+.addDocsContainer :deep(.arco-select-focused .arco-select-view) {
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
 .addDocsContainer :deep(.arco-tree-node-title) {
   display: flex;
   align-items: center;
   gap: 4px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  transition: background-color 0.2s;
 }
 
 .addDocsContainer :deep(.arco-tree-node-selected .arco-tree-node-title) {
-  background-color: #e6f7ff;
-  border-radius: 4px;
+  background-color: rgba(102, 126, 234, 0.1);
+}
+
+.addDocsContainer :deep(.arco-tree-node-title:hover) {
+  background-color: #f2f3f5;
+}
+
+.addDocsContainer :deep(.arco-modal-footer) {
+  padding: 16px 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.addDocsContainer :deep(.arco-btn-primary) {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.addDocsContainer :deep(.arco-btn-primary:hover:not(:disabled)) {
+  background: linear-gradient(135deg, #5568d3 0%, #653993 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.addDocsContainer :deep(.arco-btn-primary:disabled) {
+  background: #c9cdd4;
+  cursor: not-allowed;
+}
+
+.addDocsContainer :deep(.arco-btn-secondary) {
+  border-radius: 8px;
+  transition: all 0.3s;
+}
+
+.addDocsContainer :deep(.arco-btn-secondary:hover) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 </style>
