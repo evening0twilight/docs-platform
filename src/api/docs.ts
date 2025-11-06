@@ -336,47 +336,23 @@ export const getSharedDocuments = async (params?: {
  * @param documentId 文档ID
  * @param isPinned true=置顶, false=取消置顶
  */
-export const toggleDocumentPin = async (documentId: number, isPinned: boolean): Promise<any> => {
+export const toggleDocumentPin = async (documentId: number, isPinned: boolean): Promise<DocumentResponse> => {
   try {
-    const token = localStorage.getItem('token')
-    const url = `http://165.227.56.186:3000/api/documents/${documentId}`
-    const requestBody = {
-      isPinned: isPinned
-    }
-    
     console.log('[API] 置顶请求:', {
-      url,
       documentId,
-      isPinned,
-      requestBody,
-      token: token ? '已设置' : '未设置'
+      isPinned
     });
     
-    const response = await fetch(url, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      },
-      body: JSON.stringify(requestBody)
-    })
-    
-    const result = await response.json()
-    console.log('[API] 置顶响应:', {
-      status: response.status,
-      ok: response.ok,
-      result
+    const response = await http.put<DocumentResponse>(`/documents/${documentId}`, { 
+      isPinned: isPinned 
     });
     
-    // 检查响应状态和返回的 success 字段
-    if (!response.ok || !result.success) {
-      throw new Error(result.message || result.error || '置顶操作失败')
-    }
+    console.log('[API] 置顶响应:', response);
     
-    return result
+    return response;
   } catch (error) {
-    console.error('[API] 切换置顶状态失败:', error)
-    throw error
+    console.error('[API] 切换置顶状态失败:', error);
+    throw error;
   }
 }
 
@@ -385,11 +361,18 @@ export const toggleDocumentPin = async (documentId: number, isPinned: boolean): 
  */
 export const renameDocument = async (documentId: number, newName: string): Promise<DocumentResponse> => {
   try {
-    const response = await http.patch(`/documents/${documentId}/rename`, { name: newName })
-    return response
+    console.log('[API] 重命名请求:', { documentId, newName });
+    
+    const response = await http.patch<DocumentResponse>(`/documents/${documentId}/rename`, { 
+      name: newName 
+    });
+    
+    console.log('[API] 重命名响应:', response);
+    
+    return response;
   } catch (error) {
-    console.error('重命名文档失败:', error)
-    throw error
+    console.error('重命名文档失败:', error);
+    throw error;
   }
 }
 
@@ -398,10 +381,17 @@ export const renameDocument = async (documentId: number, newName: string): Promi
  */
 export const moveDocument = async (documentId: number, targetFolderId: number | null): Promise<DocumentResponse> => {
   try {
-    const response = await http.patch(`/documents/${documentId}`, { parentId: targetFolderId })
-    return response
+    console.log('[API] 移动请求:', { documentId, targetFolderId });
+    
+    const response = await http.patch<DocumentResponse>(`/documents/${documentId}/move`, { 
+      parentId: targetFolderId 
+    });
+    
+    console.log('[API] 移动响应:', response);
+    
+    return response;
   } catch (error) {
-    console.error('移动文档失败:', error)
-    throw error
+    console.error('移动文档失败:', error);
+    throw error;
   }
 }
