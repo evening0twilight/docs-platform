@@ -156,7 +156,23 @@ export const getDocumentPath = async (documentId: string | number): Promise<Docu
 // 获取文件夹内容（动态加载）
 export const getFolderContents = async (parentId: string | number): Promise<FolderContentsResponse> => {
   try {
-    const response = await http.get<FolderContentsResponse>(`/documents/folders/${parentId}/contents`);
+    const response = await http.get<any>(`/documents/folders/${parentId}/contents`);
+    console.log('[API] 获取文件夹内容响应:', response);
+    
+    // 处理后端返回的数据结构
+    if (response.data && response.data.contents) {
+      // 分离文件夹和文档
+      const contents = response.data.contents;
+      const folders = contents.filter((item: any) => item.itemType === 'folder');
+      const documents = contents.filter((item: any) => item.itemType === 'document');
+      
+      return {
+        folders,
+        documents
+      };
+    }
+    
+    // 如果已经是正确格式，直接返回
     return response;
   } catch (error) {
     console.error('获取文件夹内容失败:', error);
@@ -382,7 +398,7 @@ export const renameDocument = async (documentId: number, newName: string): Promi
  */
 export const moveDocument = async (documentId: number, targetFolderId: number | null): Promise<DocumentResponse> => {
   try {
-    const response = await http.patch(`/documents/${documentId}/move`, { parentId: targetFolderId })
+    const response = await http.patch(`/documents/${documentId}`, { parentId: targetFolderId })
     return response
   } catch (error) {
     console.error('移动文档失败:', error)
