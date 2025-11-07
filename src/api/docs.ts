@@ -359,16 +359,18 @@ export const toggleDocumentPin = async (documentId: number, isPinned: boolean): 
 /**
  * 重命名文档
  */
-export const renameDocument = async (documentId: number, newName: string): Promise<DocumentResponse> => {
+export const renameDocument = async (
+  documentId: number, 
+  newTitle: string
+): Promise<DocumentResponse> => {
   try {
-    console.log('[API] 重命名请求:', { documentId, newName });
+    console.log('[API] 重命名文档:', { documentId, newTitle });
     
-    const response = await http.patch<DocumentResponse>(`/documents/${documentId}`, { 
-      name: newName 
+    const response = await http.put<DocumentResponse>(`/documents/${documentId}`, { 
+      title: newTitle
     });
     
     console.log('[API] 重命名响应:', response);
-    
     return response;
   } catch (error) {
     console.error('重命名文档失败:', error);
@@ -377,21 +379,67 @@ export const renameDocument = async (documentId: number, newName: string): Promi
 }
 
 /**
+ * 重命名文件夹
+ */
+export const renameFolder = async (
+  folderId: number, 
+  newName: string
+): Promise<DocumentResponse> => {
+  try {
+    console.log('[API] 重命名文件夹:', { folderId, newName });
+    
+    const response = await http.put<DocumentResponse>(`/documents/${folderId}`, { 
+      name: newName
+    });
+    
+    console.log('[API] 重命名响应:', response);
+    return response;
+  } catch (error) {
+    console.error('重命名文件夹失败:', error);
+    throw error;
+  }
+}
+
+/**
  * 移动文档到其他文件夹
  */
-export const moveDocument = async (documentId: number, targetFolderId: number | null): Promise<DocumentResponse> => {
+export const moveDocument = async (
+  documentId: number, 
+  targetFolderId: number | null
+): Promise<DocumentResponse> => {
   try {
-    console.log('[API] 移动请求:', { documentId, targetFolderId });
+    console.log('[API] 移动文档:', { documentId, targetFolderId });
     
-    const response = await http.patch<DocumentResponse>(`/documents/${documentId}`, { 
+    const response = await http.put<DocumentResponse>(`/documents/${documentId}`, { 
       parentId: targetFolderId 
     });
     
     console.log('[API] 移动响应:', response);
-    
     return response;
   } catch (error) {
     console.error('移动文档失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 移动文件夹到其他文件夹
+ */
+export const moveFolder = async (
+  folderId: number, 
+  targetFolderId: number | null
+): Promise<DocumentResponse> => {
+  try {
+    console.log('[API] 移动文件夹:', { folderId, targetFolderId });
+    
+    const response = await http.put<DocumentResponse>(`/documents/${folderId}`, { 
+      parentId: targetFolderId 
+    });
+    
+    console.log('[API] 移动响应:', response);
+    return response;
+  } catch (error) {
+    console.error('移动文件夹失败:', error);
     throw error;
   }
 }
