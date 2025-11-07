@@ -363,7 +363,7 @@ export const renameDocument = async (documentId: number, newName: string): Promi
   try {
     console.log('[API] 重命名请求:', { documentId, newName });
     
-    const response = await http.patch<DocumentResponse>(`/documents/${documentId}/rename`, { 
+    const response = await http.patch<DocumentResponse>(`/documents/${documentId}`, { 
       name: newName 
     });
     
@@ -383,7 +383,7 @@ export const moveDocument = async (documentId: number, targetFolderId: number | 
   try {
     console.log('[API] 移动请求:', { documentId, targetFolderId });
     
-    const response = await http.patch<DocumentResponse>(`/documents/${documentId}/move`, { 
+    const response = await http.patch<DocumentResponse>(`/documents/${documentId}`, { 
       parentId: targetFolderId 
     });
     
