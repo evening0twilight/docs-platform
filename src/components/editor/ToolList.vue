@@ -16,7 +16,7 @@
             editor?.isActive('heading', { level: 5 })
         }"
       >
-        <img :src="h1" alt="标题" />
+        <img :src="H" alt="标题" />
       </div>
       <transition name="menu-fade">
         <div v-if="showHeadingMenu" class="heading-menu">
@@ -161,6 +161,7 @@ import Subscript from '@tiptap/extension-subscript'
 import { uploadImage } from '@/api/upload'
 import { processEditorImage } from '@/utils/imageCompress'
 import { Message } from '@arco-design/web-vue'
+import H from '@/assets/editorIcon/H.svg'
 import h1 from '@/assets/editorIcon/h1.svg'
 import h2 from '@/assets/editorIcon/h2.svg'
 import h3 from '@/assets/editorIcon/h3.svg'
