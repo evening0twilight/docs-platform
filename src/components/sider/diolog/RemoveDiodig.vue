@@ -48,7 +48,7 @@
 import { ref, computed } from 'vue';
 import { IconFolder, IconFile, IconLocation, IconInfoCircle } from '@arco-design/web-vue/es/icon';
 import { Message } from '@arco-design/web-vue';
-import { getDocumentTree, moveDocument, getFolderPath, getFolderContents } from '@/api/docs';
+import { getDocumentTree, moveDocument, moveFolder, getFolderPath, getFolderContents } from '@/api/docs';
 
 interface TreeNode {
   key: string;
@@ -226,7 +226,7 @@ const onSearch = async (keyword: string) => {
   }
 };
 
-// 目录选择变化（复用 addDocs 的逻辑）
+// 目录选择变化
 const onDirectoryChange = async (value: string) => {
   selectedDirectory.value = value;
   console.log('选中目录:', value);
@@ -246,7 +246,13 @@ const handleConfirm = async () => {
     movingItem.value = true;
     const targetFolderId = selectedDirectory.value ? parseInt(selectedDirectory.value) : null;
 
-    await moveDocument(currentItem.value!.id, targetFolderId);
+    // 根据类型调用不同的 API
+    if (currentItem.value!.type === 'folder') {
+      await moveFolder(currentItem.value!.id, targetFolderId);
+    } else {
+      await moveDocument(currentItem.value!.id, targetFolderId);
+    }
+    
     Message.success('移动成功');
     emit('success');
     closeDialog();

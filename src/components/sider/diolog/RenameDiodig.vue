@@ -20,10 +20,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, toRefs, computed } from 'vue';
+import { ref, reactive, computed } from 'vue';
 import { Message } from '@arco-design/web-vue';
 import { IconInfoCircle } from '@arco-design/web-vue/es/icon';
-import { renameDocument } from '@/api/docs';
+import { renameDocument, renameFolder } from '@/api/docs';
 
 interface RenameData {
   id: number;
@@ -73,7 +73,14 @@ const handleBeforeOk = async (done: (closed: boolean) => void) => {
 
   try {
     loading.value = true;
-    await renameDocument(currentItem.value!.id, newName);
+    
+    // 根据类型调用不同的 API
+    if (currentItem.value!.type === 'folder') {
+      await renameFolder(currentItem.value!.id, newName);
+    } else {
+      await renameDocument(currentItem.value!.id, newName);
+    }
+    
     Message.success('重命名成功');
     emit('success');
     done(true);
