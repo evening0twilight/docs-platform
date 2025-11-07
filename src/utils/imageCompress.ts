@@ -10,6 +10,16 @@ export const AVATAR_CONFIG = {
   noCompressThreshold: 500 * 1024, // 小于 500KB 不压缩
 };
 
+// 编辑器图片配置
+export const EDITOR_IMAGE_CONFIG = {
+  maxSize: 10 * 1024 * 1024, // 10MB
+  allowedTypes: ['image/jpeg', 'image/jpg', 'image/png', 'image/webp', 'image/gif'],
+  maxWidth: 1920, // 最大宽度
+  maxHeight: 1080, // 最大高度
+  quality: 0.9, // 压缩质量
+  noCompressThreshold: 1 * 1024 * 1024, // 小于 1MB 不压缩
+};
+
 /**
  * 验证图片文件
  */
@@ -175,5 +185,63 @@ export const processAvatarImage = async (file: File): Promise<File> => {
   } catch (error) {
     console.error('图片压缩失败:', error);
     throw error;
+  }
+};
+
+/**
+ * 验证编辑器图片文件
+ */
+export const validateEditorImageFile = (file: File): { valid: boolean; error?: string } => {
+  // 验证文件类型
+  if (!EDITOR_IMAGE_CONFIG.allowedTypes.includes(file.type)) {
+    return {
+      valid: false,
+      error: `只支持 ${EDITOR_IMAGE_CONFIG.allowedTypes.map(t => t.split('/')[1].toUpperCase()).join('、')} 格式的图片`,
+    };
+  }
+
+  // 验证文件大小
+  if (file.size > EDITOR_IMAGE_CONFIG.maxSize) {
+    return {
+      valid: false,
+      error: `图片大小不能超过 ${EDITOR_IMAGE_CONFIG.maxSize / 1024 / 1024}MB`,
+    };
+  }
+
+  return { valid: true };
+};
+
+/**
+ * 处理编辑器图片上传（验证 + 压缩）
+ */
+export const processEditorImage = async (file: File): Promise<File> => {
+  // 1. 验证文件
+  const validation = validateEditorImageFile(file);
+  if (!validation.valid) {
+    throw new Error(validation.error);
+  }
+
+  // 2. 如果文件小于阈值，直接返回
+  if (file.size < EDITOR_IMAGE_CONFIG.noCompressThreshold) {
+    console.log('[图片压缩] 文件小于 1MB，跳过压缩');
+    return file;
+  }
+
+  // 3. 压缩图片
+  try {
+    const compressedFile = await compressImage(file, {
+      maxWidth: EDITOR_IMAGE_CONFIG.maxWidth,
+      maxHeight: EDITOR_IMAGE_CONFIG.maxHeight,
+      quality: EDITOR_IMAGE_CONFIG.quality,
+    });
+
+    console.log('[图片压缩] 原始大小:', (file.size / 1024).toFixed(2), 'KB');
+    console.log('[图片压缩] 压缩后:', (compressedFile.size / 1024).toFixed(2), 'KB');
+
+    return compressedFile;
+  } catch (error) {
+    console.error('图片压缩失败:', error);
+    // 压缩失败则返回原文件
+    return file;
   }
 };

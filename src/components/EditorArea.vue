@@ -37,7 +37,12 @@
         <div class="toolbar-container">
           <!-- 左侧:TipTap工具栏(可横向滚动) -->
           <div class="toolbar-tools">
-            <ToolList v-if="editor" :editor="editor" />
+            <ToolList 
+              v-if="editor" 
+              :editor="editor"
+              @upload-start="uploadLoading = true"
+              @upload-end="uploadLoading = false"
+            />
           </div>
 
           <!-- 右侧:分享按钮(固定) -->
@@ -49,7 +54,17 @@
         </div>
 
         <!-- 编辑器主体 -->
-        <editor-content :editor="editor" class="w-full h-full text-black" />
+        <div class="editor-content-wrapper">
+          <editor-content :editor="editor" class="w-full h-full text-black" />
+          
+          <!-- 上传 Loading 遮罩 -->
+          <div v-if="uploadLoading" class="upload-loading-overlay">
+            <div class="upload-loading-content">
+              <a-spin :size="32" />
+              <p class="upload-loading-text">图片上传中...</p>
+            </div>
+          </div>
+        </div>
       </template>
     </div>
 
@@ -84,6 +99,9 @@ import Superscript from '@tiptap/extension-superscript'
 import Subscript from '@tiptap/extension-subscript'
 import Underline from '@tiptap/extension-underline'
 import StarterKit from '@tiptap/starter-kit'
+import TaskList from '@tiptap/extension-task-list'
+import TaskItem from '@tiptap/extension-task-item'
+import Image from '@tiptap/extension-image'
 import ToolList from './editor/ToolList.vue';
 import EmptyState from './EmptyState.vue';
 import OnlineUsers from './OnlineUsers.vue';
@@ -105,6 +123,7 @@ const documentId = computed(() => props.id || route.params.id as string)
 
 // 响应式状态
 const loading = ref(false)
+const uploadLoading = ref(false) // 图片上传 loading
 const documentData = ref<any>(null)
 const isModified = ref(false)
 const isRemoteUpdate = ref(false) // 标记是否为远程更新,避免循环发送
@@ -288,7 +307,25 @@ const editor = useEditor({
       },
     }),
     Subscript,
-    Superscript
+    Superscript,
+    TaskList.configure({
+      HTMLAttributes: {
+        class: 'task-list',
+      },
+    }),
+    TaskItem.configure({
+      HTMLAttributes: {
+        class: 'task-item',
+      },
+      nested: true,
+    }),
+    Image.configure({
+      inline: false,
+      allowBase64: false,
+      HTMLAttributes: {
+        class: 'editor-image',
+      },
+    })
   ],
   editable: true,
   injectCSS: false,
@@ -739,6 +776,81 @@ onBeforeUnmount(() => {
   margin: 0;
 }
 
+/* 任务列表样式 */
+.editorContainer :deep(.ProseMirror ul[data-type="taskList"]),
+.editorContainer :deep(.ProseMirror .task-list) {
+  list-style: none;
+  padding-left: 0;
+  margin: 0.5rem 0;
+}
+
+.editorContainer :deep(.ProseMirror li[data-type="taskItem"]),
+.editorContainer :deep(.ProseMirror .task-item) {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  margin: 0.25rem 0;
+}
+
+.editorContainer :deep(.ProseMirror li[data-type="taskItem"] > label),
+.editorContainer :deep(.ProseMirror .task-item > label) {
+  flex-shrink: 0;
+  margin-top: 0.8rem;
+  user-select: none;
+}
+
+.editorContainer :deep(.ProseMirror li[data-type="taskItem"] > label input[type="checkbox"]),
+.editorContainer :deep(.ProseMirror .task-item > label input[type="checkbox"]) {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: #1890ff;
+}
+
+.editorContainer :deep(.ProseMirror li[data-type="taskItem"] > div),
+.editorContainer :deep(.ProseMirror .task-item > div) {
+  flex: 1;
+  min-width: 0;
+}
+
+.editorContainer :deep(.ProseMirror li[data-type="taskItem"][data-checked="true"] > div),
+.editorContainer :deep(.ProseMirror .task-item[data-checked="true"] > div) {
+  text-decoration: line-through;
+  color: #999;
+}
+
+/* 图片样式 */
+.editorContainer :deep(.ProseMirror img),
+.editorContainer :deep(.ProseMirror .editor-image) {
+  max-width: 80%;
+  /* 限制宽度为编辑区的80%，避免占满整行 */
+  max-height: 400px;
+  /* 限制高度为400px，避免占用太多垂直空间 */
+  height: auto;
+  width: auto;
+  /* 保持图片比例 */
+  display: block;
+  margin: 1rem auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  object-fit: contain;
+  /* 确保图片完整显示，不变形 */
+}
+
+.editorContainer :deep(.ProseMirror img:hover),
+.editorContainer :deep(.ProseMirror .editor-image:hover) {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: scale(1.02);
+}
+
+/* 确保图片独占一行 */
+.editorContainer :deep(.ProseMirror p:has(img)) {
+  display: block;
+  text-align: center;
+}
+
 /* 段落样式 */
 .editorContainer :deep(.ProseMirror p),
 .editorContainer :deep(.ProseMirror .paragraph) {
@@ -796,5 +908,43 @@ onBeforeUnmount(() => {
 /* 确保编辑器获得焦点时有正确的样式 */
 .editorContainer :deep(.ProseMirror:focus) {
   outline: none;
+}
+
+/* 编辑器内容包裹器 - 用于定位上传遮罩 */
+.editor-content-wrapper {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 上传 Loading 遮罩层 */
+.upload-loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.9);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(2px);
+}
+
+.upload-loading-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.upload-loading-text {
+  margin: 0;
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
 }
 </style>
