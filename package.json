@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.1.12",
+    "@tiptap/core": "^3.10.3",
     "@tiptap/extension-collaboration": "^3.3.0",
     "@tiptap/extension-collaboration-cursor": "^2.26.1",
     "@tiptap/extension-highlight": "^3.3.0",

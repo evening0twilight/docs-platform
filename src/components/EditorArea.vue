@@ -37,12 +37,16 @@
         <div class="toolbar-container">
           <!-- 左侧:TipTap工具栏(可横向滚动) -->
           <div class="toolbar-tools">
-            <ToolList 
-              v-if="editor" 
-              :editor="editor"
-              @upload-start="uploadLoading = true"
-              @upload-end="uploadLoading = false"
-            />
+            <ToolList v-if="editor" :editor="editor" @upload-start="uploadLoading = true"
+              @upload-end="uploadLoading = false" />
+          </div>
+
+          <!-- 中间:模式切换器 -->
+          <div class="toolbar-mode">
+            <ModeSwitcher :current-mode="editorModeStore.currentMode" :features="editorModeStore.documentFeatures"
+              :online-users-count="collaboration?.onlineUsers.value.length || 0" :unread-comments-count="0"
+              :is-document-owner="editorModeStore.permissions.isDocumentOwner" @switch-mode="handleModeSwitch"
+              @enable-collaboration="handleEnableCollaboration" @disable-collaboration="handleDisableCollaboration" />
           </div>
 
           <!-- 右侧:分享按钮(固定) -->
@@ -56,7 +60,7 @@
         <!-- 编辑器主体 -->
         <div class="editor-content-wrapper">
           <editor-content :editor="editor" class="w-full h-full text-black" />
-          
+
           <!-- 上传 Loading 遮罩 -->
           <div v-if="uploadLoading" class="upload-loading-overlay">
             <div class="upload-loading-content">
@@ -68,18 +72,31 @@
       </template>
     </div>
 
-    <!-- 在线用户侧边栏（仅在有其他在线用户时显示，不包括自己） -->
-    <div v-if="collaboration && documentId && collaboration.onlineUsers.value.length > 1" class="online-users-sidebar"
+    <!-- 动态侧边栏（根据模式显示不同内容） -->
+    <div v-if="editorModeStore.sidebarVisible && documentId" class="feature-sidebar"
       :class="{ collapsed: sidebarCollapsed }">
-      <!-- 折叠按钮始终可见 -->
-      <div class="sidebar-toggle" @click="sidebarCollapsed = !sidebarCollapsed"
-        :title="sidebarCollapsed ? '展开在线用户' : '收起在线用户'">
-        <span v-if="sidebarCollapsed">👥</span>
+      <!-- 折叠按钮 -->
+      <div class="sidebar-toggle" @click="sidebarCollapsed = !sidebarCollapsed" :title="sidebarCollapsed ? '展开' : '收起'">
+        <span v-if="sidebarCollapsed">{{ getSidebarIcon() }}</span>
         <span v-else>▶</span>
       </div>
-      <!-- 内容区域 -->
+
+      <!-- 侧边栏内容 -->
       <div v-show="!sidebarCollapsed" class="sidebar-content">
-        <OnlineUsers :users="collaboration.onlineUsers.value" :is-connected="collaboration.isConnected.value" />
+        <!-- AI 助手 -->
+        <AIAssistant v-if="editorModeStore.currentMode === EditorMode.AI_ASSISTANT" />
+
+        <!-- 评论列表 -->
+        <CommentList v-else-if="editorModeStore.currentMode === EditorMode.COMMENT" :document-id="documentId"
+          :editor="editor" />
+
+        <!-- 协作用户 -->
+        <CollaborationUsers v-else-if="editorModeStore.currentMode === EditorMode.COLLABORATION"
+          :users="collaboration?.onlineUsers.value || []" :is-connected="collaboration?.isConnected.value || false"
+          :current-user-id="String(userStore.userInfo?.id || '')" :owner-id="String(documentData?.userId || '')" />
+
+        <!-- 历史版本 -->
+        <HistoryTimeline v-else-if="editorModeStore.currentMode === EditorMode.HISTORY" />
       </div>
     </div>
 
@@ -93,6 +110,9 @@ import { ref, onMounted, reactive, toRefs, onBeforeUnmount, watch, computed } fr
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import { useRoute } from 'vue-router'
 import { useTabsStore } from '@/store/tabs'
+import { useEditorModeStore } from '@/store/editorMode'
+import { EditorMode } from '@/store/editorMode'
+import { useUserStore } from '@/store/user'
 import { getDocument, saveDocumentContent } from '@/api/docs'
 import Highlight from '@tiptap/extension-highlight'
 import Superscript from '@tiptap/extension-superscript'
@@ -102,10 +122,16 @@ import StarterKit from '@tiptap/starter-kit'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Image from '@tiptap/extension-image'
+import { CommentMark } from '@/extensions/CommentMark'
 import ToolList from './editor/ToolList.vue';
+import ModeSwitcher from './editor/ModeSwitcher.vue';
 import EmptyState from './EmptyState.vue';
 import OnlineUsers from './OnlineUsers.vue';
 import ShareDialog from './sider/diolog/shareDialog.vue';
+import AIAssistant from './sidebar/AIAssistant.vue';
+import CommentList from './sidebar/CommentList.vue';
+import CollaborationUsers from './sidebar/CollaborationUsers.vue';
+import HistoryTimeline from './sidebar/HistoryTimeline.vue';
 import { useCollaboration } from '@/composables/useCollaboration'
 import { socketService } from '@/services/socket'  // ⭐ 导入 socketService
 import { Message } from '@arco-design/web-vue'
@@ -117,6 +143,8 @@ const props = defineProps<{
 
 const route = useRoute()
 const tabsStore = useTabsStore()
+const editorModeStore = useEditorModeStore()
+const userStore = useUserStore()
 
 // 计算当前文档ID
 const documentId = computed(() => props.id || route.params.id as string)
@@ -325,7 +353,8 @@ const editor = useEditor({
       HTMLAttributes: {
         class: 'editor-image',
       },
-    })
+    }),
+    CommentMark, // 添加评论标记扩展
   ],
   editable: true,
   injectCSS: false,
@@ -375,6 +404,16 @@ const fetchDocument = async () => {
     const permission = (doc as any).permission
     const isEditable = permission === 'owner' || permission === 'editor'
     editor.value.setEditable(isEditable)
+
+    // ⭐ 更新编辑器模式 store 的权限信息
+    const currentUserId = userStore.userInfo?.id || ''
+    const ownerId = (doc as any).userId || ''
+    editorModeStore.permissions.isDocumentOwner = currentUserId === ownerId
+    editorModeStore.permissions.canEdit = isEditable
+    editorModeStore.permissions.canComment = isEditable || permission === 'viewer'
+    editorModeStore.permissions.hasAIAccess = true // 假设所有用户都有AI访问权限
+
+    console.log('[EditorArea] 权限更新:', editorModeStore.permissions)
 
     // 如果是只读权限，提示用户
     if (!isEditable && permission === 'viewer') {
@@ -484,6 +523,72 @@ const openShareDialog = () => {
   }
 }
 
+// ====== 模式切换相关方法 ======
+// 处理模式切换
+const handleModeSwitch = (mode: EditorMode) => {
+  console.log('[EditorArea] 切换到模式:', mode)
+  editorModeStore.switchMode(mode)
+}
+
+// 启用协作
+const handleEnableCollaboration = async () => {
+  console.log('[EditorArea] 启用协作')
+  try {
+    // 更新文档特性状态
+    editorModeStore.documentFeatures.collaborationEnabled = true
+
+    // 加入文档房间（如果还未加入）
+    if (documentId.value && !collaboration) {
+      // 初始化协作将在 watch documentId 中自动处理
+      console.log('[EditorArea] 等待协作初始化...')
+    }
+
+    // 切换到协作模式
+    editorModeStore.switchMode(EditorMode.COLLABORATION)
+    Message.success('已启用协作模式')
+  } catch (error) {
+    console.error('[EditorArea] 启用协作失败:', error)
+    Message.error('启用协作失败')
+  }
+}
+
+// 禁用协作
+const handleDisableCollaboration = () => {
+  console.log('[EditorArea] 禁用协作')
+  try {
+    // 更新文档特性状态
+    editorModeStore.documentFeatures.collaborationEnabled = false
+
+    // 离开文档房间
+    if (documentId.value) {
+      socketService.leaveDocument(documentId.value)
+    }
+
+    // 切换回普通模式
+    editorModeStore.switchMode(EditorMode.NORMAL)
+    Message.success('已退出协作模式')
+  } catch (error) {
+    console.error('[EditorArea] 禁用协作失败:', error)
+    Message.error('退出协作失败')
+  }
+}
+
+// 获取侧边栏图标
+const getSidebarIcon = () => {
+  switch (editorModeStore.currentMode) {
+    case EditorMode.AI_ASSISTANT:
+      return '🤖'
+    case EditorMode.COMMENT:
+      return '💬'
+    case EditorMode.COLLABORATION:
+      return '👥'
+    case EditorMode.HISTORY:
+      return '🕐'
+    default:
+      return '📋'
+  }
+}
+
 // 监听文档ID变化
 watch(() => documentId.value, (newId, oldId) => {
   if (newId && newId !== oldId && editor.value) {
@@ -557,11 +662,11 @@ onBeforeUnmount(() => {
 
 /* 左侧工具区域 - 可横向滚动 */
 .toolbar-tools {
-  flex: 1;
+  flex: 0 1 auto;
   overflow-x: auto;
   overflow-y: hidden;
-  min-width: 0;
-  /* 允许flex子项收缩 */
+  min-width: 200px;
+  max-width: 50%;
 
   /* 隐藏滚动条但保留滚动功能 */
   scrollbar-width: thin;
@@ -585,6 +690,16 @@ onBeforeUnmount(() => {
   background: #c0c4cc;
 }
 
+/* 中间模式切换区域 */
+.toolbar-mode {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  border-left: 1px solid #dcdfe6;
+  border-right: 1px solid #dcdfe6;
+}
+
 /* 右侧操作区域 - 固定位置 */
 .toolbar-actions {
   flex-shrink: 0;
@@ -592,7 +707,6 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 8px;
   padding-left: 12px;
-  border-left: 1px solid #dcdfe6;
 }
 
 .editorContainer {
@@ -682,7 +796,57 @@ onBeforeUnmount(() => {
   background-color: #ef4444;
 }
 
-/* 在线用户侧边栏 */
+/* 功能侧边栏（AI、评论、协作、历史） */
+.feature-sidebar {
+  width: 320px;
+  position: relative;
+  transition: all 0.3s ease;
+  background: #fff;
+  border-left: 1px solid var(--color-border);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -2px 0 8px rgba(0, 0, 0, 0.05);
+}
+
+.feature-sidebar.collapsed {
+  width: 40px;
+}
+
+.feature-sidebar .sidebar-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+.feature-sidebar .sidebar-toggle {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 32px;
+  height: 60px;
+  background: var(--color-fill-2);
+  border: 1px solid var(--color-border);
+  border-left: none;
+  border-radius: 0 6px 6px 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 16px;
+  z-index: 20;
+  transition: all 0.2s ease;
+}
+
+.feature-sidebar.collapsed .sidebar-toggle {
+  left: 8px;
+}
+
+.feature-sidebar .sidebar-toggle:hover {
+  background: var(--color-fill-3);
+  transform: translateY(-50%) scale(1.05);
+}
+
+/* 在线用户侧边栏（保留旧的，兼容现有功能） */
 .online-users-sidebar {
   width: 280px;
   position: relative;
@@ -884,6 +1048,36 @@ onBeforeUnmount(() => {
   color: inherit;
   padding: 0.125rem 0.25rem;
   border-radius: 0.25rem;
+}
+
+/* 评论高亮样式 */
+.editorContainer :deep(.ProseMirror .comment-highlight) {
+  background-color: rgba(var(--warning-6), 0.2);
+  border-bottom: 2px solid rgb(var(--warning-6));
+  cursor: pointer;
+  transition: all 0.2s;
+  padding: 2px 0;
+}
+
+.editorContainer :deep(.ProseMirror .comment-highlight:hover) {
+  background-color: rgba(var(--warning-6), 0.3);
+}
+
+/* 评论高亮闪烁动画 */
+.editorContainer :deep(.ProseMirror .comment-highlight-flash) {
+  animation: comment-flash 2s ease-in-out;
+}
+
+@keyframes comment-flash {
+
+  0%,
+  100% {
+    background-color: rgba(var(--warning-6), 0.2);
+  }
+
+  50% {
+    background-color: rgba(var(--warning-6), 0.6);
+  }
 }
 
 /* 标题样式 */
