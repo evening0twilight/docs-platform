@@ -107,31 +107,32 @@ export const CommentMark = Mark.create<CommentMarkOptions>({
         },
       unsetCommentMark:
         commentId =>
-        ({ tr, state, dispatch }) => {
+        ({ tr, state, dispatch, commands }) => {
           if (!commentId) {
             // 如果没有指定 commentId，移除所有评论标记
-            return ({ commands }: any) => commands.unsetMark(this.name)
+            return commands.unsetMark(this.name)
           }
 
           // 移除特定 commentId 的标记
-          const { selection } = state
-          const { from, to } = selection
-
-          if (dispatch) {
-            tr.doc.nodesBetween(from, to, (node, pos) => {
-              if (node.marks) {
-                node.marks.forEach(mark => {
-                  if (mark.type.name === this.name && mark.attrs.commentId === commentId) {
-                    const markFrom = pos
-                    const markTo = pos + node.nodeSize
+          let removed = false
+          
+          // 遍历整个文档，查找并移除指定 commentId 的标记
+          tr.doc.descendants((node, pos) => {
+            if (node.marks) {
+              node.marks.forEach(mark => {
+                if (mark.type.name === this.name && mark.attrs.commentId === commentId) {
+                  const markFrom = pos
+                  const markTo = pos + node.nodeSize
+                  if (dispatch) {
                     tr.removeMark(markFrom, markTo, mark.type)
                   }
-                })
-              }
-            })
-          }
+                  removed = true
+                }
+              })
+            }
+          })
 
-          return true
+          return removed
         },
       toggleCommentMark:
         attributes =>
