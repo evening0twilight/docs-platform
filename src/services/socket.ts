@@ -19,8 +19,10 @@ export interface UserInfo {
 export interface DocumentEdit {
   documentId: string
   type: 'insert' | 'delete' | 'replace'
-  content: string
-  position: { line: number; column: number }
+  content?: string | any  // 可选，delete 操作不需要 content
+  position?: { line: number; column: number }  // 兼容旧版
+  from?: number  // 编辑起始位置
+  to?: number    // 编辑结束位置
   timestamp?: number
 }
 

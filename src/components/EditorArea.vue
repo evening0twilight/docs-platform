@@ -74,7 +74,7 @@
 
     <!-- 动态侧边栏（根据模式显示不同内容） -->
     <div v-if="editorModeStore.sidebarVisible && documentId" class="feature-sidebar"
-      :class="{ collapsed: sidebarCollapsed }">
+      :class="{ collapsed: sidebarCollapsed, 'collaboration-mode': editorModeStore.currentMode === EditorMode.COLLABORATION }">
       <!-- 折叠按钮 -->
       <div class="sidebar-toggle" @click="sidebarCollapsed = !sidebarCollapsed" :title="sidebarCollapsed ? '展开' : '收起'">
         <span v-if="sidebarCollapsed">{{ getSidebarIcon() }}</span>
@@ -90,10 +90,11 @@
         <CommentList v-else-if="editorModeStore.currentMode === EditorMode.COMMENT" :document-id="documentId"
           :editor="editor" />
 
-        <!-- 协作用户 -->
+        <!-- 协作用户 - 浮动在编辑器上方 -->
         <CollaborationUsers v-else-if="editorModeStore.currentMode === EditorMode.COLLABORATION"
           :users="collaboration?.onlineUsers.value || []" :is-connected="collaboration?.isConnected.value || false"
-          :current-user-id="String(userStore.userInfo?.id || '')" :owner-id="String(documentData?.userId || '')" />
+          :current-user-id="String(userStore.userInfo?.id || '')"
+          :owner-id="String(documentData?.creatorId || documentData?.userId || '')" />
 
         <!-- 历史版本 -->
         <HistoryTimeline v-else-if="editorModeStore.currentMode === EditorMode.HISTORY" />
@@ -172,38 +173,65 @@ const {
 
 // ====== WebSocket 协作功能 ======
 
+// 标记：是否正在应用远程编辑（防止死循环）
+const isApplyingRemoteEdit = ref(false)
+
 // 应用远程编辑到编辑器
 const applyRemoteEdit = (edit: any) => {
-  if (!editor.value || isRemoteUpdate.value) return
+  if (!editor.value || isApplyingRemoteEdit.value) return
 
   try {
-    isRemoteUpdate.value = true // 标记为远程更新
+    isApplyingRemoteEdit.value = true // 标记为远程更新
 
-    const { type, content, position } = edit
+    const { type, content, from, to } = edit
 
     switch (type) {
-      case 'replace':
-        // 完全替换内容（简单场景）
-        editor.value.commands.setContent(content)
-        break
-
       case 'insert':
-        // TODO: 实现精确位置插入（需要位置计算）
-        console.log('[Editor] 插入操作暂未实现精确位置')
+        // 精确位置插入
+        if (typeof from === 'number' && content) {
+          // content 可能是 JSON 格式或 HTML 字符串
+          const insertContent = typeof content === 'string' ? content : content
+          editor.value.commands.insertContentAt(from, insertContent)
+        } else {
+          console.warn('[Editor] insert 操作缺少必要参数:', edit)
+        }
         break
 
       case 'delete':
-        // TODO: 实现精确位置删除
-        console.log('[Editor] 删除操作暂未实现精确位置')
+        // 精确位置删除
+        if (typeof from === 'number' && typeof to === 'number') {
+          editor.value.commands.deleteRange({ from, to })
+        } else {
+          console.warn('[Editor] delete 操作缺少必要参数:', edit)
+        }
+        break
+
+      case 'replace':
+        // 替换指定范围的内容
+        if (typeof from === 'number' && typeof to === 'number' && content) {
+          const replaceContent = typeof content === 'string' ? content : content
+          editor.value
+            .chain()
+            .deleteRange({ from, to })
+            .insertContentAt(from, replaceContent)
+            .run()
+        } else if (content) {
+          // 如果没有范围，完全替换（兼容旧版）
+          console.warn('[Editor] 使用完全替换模式（不推荐，可能导致光标冲突）')
+          editor.value.commands.setContent(content)
+        }
         break
 
       default:
         console.warn('[Editor] 未知的编辑类型:', type)
     }
   } catch (error) {
-    console.error('[Editor] 应用远程编辑失败:', error)
+    console.error('[Editor] 应用远程编辑失败:', error, edit)
   } finally {
-    isRemoteUpdate.value = false
+    // 延迟解除标记，确保事件处理完成
+    setTimeout(() => {
+      isApplyingRemoteEdit.value = false
+    }, 50)
   }
 }
 
@@ -264,28 +292,61 @@ watch(documentId, (newId, oldId) => {
   }
 }, { immediate: true })  // ⭐ immediate: true 确保首次加载时就执行
 
-// 广播编辑操作（节流，避免过于频繁）
-let broadcastTimer: number | null = null
-const broadcastEdit = () => {
+// 广播编辑操作（使用 TipTap transaction 获取增量更新）
+const broadcastEdit = (transaction: any) => {
   if (!collaboration || !editor.value || !documentId.value) return
+  if (isApplyingRemoteEdit.value) return // 如果正在应用远程编辑，不广播
 
-  // 节流：300ms 内只发送一次
-  if (broadcastTimer) {
-    clearTimeout(broadcastTimer)
-  }
+  // 分析 transaction 中的步骤
+  const { steps } = transaction
 
-  broadcastTimer = setTimeout(() => {
-    const content = editor.value?.getHTML()
-    if (!content || !collaboration || !documentId.value) return
+  if (!steps || steps.length === 0) return
 
-    collaboration.sendEdit({
-      documentId: documentId.value,
-      type: 'replace', // 简单模式：完全替换内容
-      content: content,
-      position: { line: 0, column: 0 },
-      timestamp: Date.now(),
-    })
-  }, 300)
+  // 遍历所有步骤，发送增量编辑
+  steps.forEach((step: any) => {
+    const stepJSON = step.toJSON()
+
+    // 根据步骤类型发送不同的编辑操作
+    if (stepJSON.stepType === 'replace') {
+      const { from, to } = stepJSON
+      const slice = step.slice
+
+      // 如果有内容插入
+      if (slice && slice.content && slice.content.size > 0) {
+        const content = slice.content.toJSON()
+
+        if (from === to) {
+          // 纯插入
+          collaboration.sendEdit({
+            documentId: documentId.value,
+            type: 'insert',
+            from,
+            content,
+            timestamp: Date.now(),
+          })
+        } else {
+          // 替换（先删除，再插入）
+          collaboration.sendEdit({
+            documentId: documentId.value,
+            type: 'replace',
+            from,
+            to,
+            content,
+            timestamp: Date.now(),
+          })
+        }
+      } else if (from < to) {
+        // 纯删除
+        collaboration.sendEdit({
+          documentId: documentId.value,
+          type: 'delete',
+          from,
+          to,
+          timestamp: Date.now(),
+        })
+      }
+    }
+  })
 }
 
 // 创建编辑器实例
@@ -358,13 +419,13 @@ const editor = useEditor({
   ],
   editable: true,
   injectCSS: false,
-  onUpdate: ({ editor }) => {
+  onUpdate: ({ editor, transaction }) => {
     // 内容变化时的处理
     handleContentChange()
 
     // 如果不是远程更新，则广播编辑操作
-    if (!isRemoteUpdate.value && collaboration && documentId.value) {
-      broadcastEdit()
+    if (!isApplyingRemoteEdit.value && collaboration && documentId.value) {
+      broadcastEdit(transaction)
     }
   },
   onSelectionUpdate: ({ editor }) => {
@@ -407,8 +468,11 @@ const fetchDocument = async () => {
 
     // ⭐ 更新编辑器模式 store 的权限信息
     const currentUserId = userStore.userInfo?.id || ''
-    const ownerId = (doc as any).userId || ''
-    editorModeStore.permissions.isDocumentOwner = currentUserId === ownerId
+    // 优先使用 creatorId，其次使用 userId
+    const ownerId = (doc as any).creatorId || (doc as any).userId || ''
+    // 判断是否是文档所有者：通过 permission 字段或 userId 比较
+    const isOwner = permission === 'owner' || String(currentUserId) === String(ownerId)
+    editorModeStore.permissions.isDocumentOwner = isOwner
     editorModeStore.permissions.canEdit = isEditable
     editorModeStore.permissions.canComment = isEditable || permission === 'viewer'
     editorModeStore.permissions.hasAIAccess = true // 假设所有用户都有AI访问权限
@@ -808,6 +872,22 @@ onBeforeUnmount(() => {
   box-shadow: -2px 0 8px rgba(0, 0, 0, 0.05);
 }
 
+/* 协作模式 - 浮动在编辑器上方 */
+.feature-sidebar.collaboration-mode {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 300px;
+  z-index: 100;
+  box-shadow: -4px 0 16px rgba(0, 0, 0, 0.1);
+  pointer-events: all;
+}
+
+.feature-sidebar.collaboration-mode.collapsed {
+  width: 48px;
+}
+
 .feature-sidebar.collapsed {
   width: 40px;
 }
@@ -837,8 +917,20 @@ onBeforeUnmount(() => {
   transition: all 0.2s ease;
 }
 
+/* 协作模式的折叠按钮 - 调整大小 */
+.feature-sidebar.collaboration-mode .sidebar-toggle {
+  width: 28px;
+  height: 48px;
+  font-size: 14px;
+}
+
 .feature-sidebar.collapsed .sidebar-toggle {
   left: 8px;
+}
+
+.feature-sidebar.collaboration-mode.collapsed .sidebar-toggle {
+  left: 10px;
+  font-size: 18px;
 }
 
 .feature-sidebar .sidebar-toggle:hover {
