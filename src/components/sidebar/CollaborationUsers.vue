@@ -54,23 +54,23 @@
 
       <!-- 协作控制 -->
       <div class="section">
-        <div class="section-title">协作设置</div>
-        <a-space direction="vertical" fill>
-          <a-button type="outline" long disabled>
-            <template #icon>
-              <icon-link />
-            </template>
-            邀请协作者
-          </a-button>
-          <a-button type="outline" long disabled>
-            <template #icon>
-              <icon-settings />
-            </template>
-            权限管理
-          </a-button>
-        </a-space>
-        <a-alert type="info" banner style="margin-top: 12px">
-          完整协作功能开发中...
+        <div class="section-title">协作信息</div>
+        <div class="collaboration-info">
+          <a-space direction="vertical" fill>
+            <div class="info-item">
+              <span class="info-label">📡 连接状态</span>
+              <a-tag :color="isConnected ? 'green' : 'red'" size="small">
+                {{ isConnected ? '已连接' : '未连接' }}
+              </a-tag>
+            </div>
+            <div class="info-item">
+              <span class="info-label">👥 在线人数</span>
+              <a-tag color="blue" size="small">{{ onlineCollaborators.length }} 人</a-tag>
+            </div>
+          </a-space>
+        </div>
+        <a-alert type="success" banner style="margin-top: 12px">
+          实时协同编辑已启用
         </a-alert>
       </div>
     </div>
@@ -279,5 +279,23 @@ const getInitial = (name: string): string => {
 .empty-state p {
   margin: 8px 0 0 0;
   font-size: 13px;
+}
+
+.collaboration-info {
+  padding: 12px;
+  background: var(--color-fill-1);
+  border-radius: 6px;
+}
+
+.info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+}
+
+.info-label {
+  font-size: 13px;
+  color: var(--color-text-2);
 }
 </style>
