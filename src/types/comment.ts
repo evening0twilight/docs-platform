@@ -11,7 +11,7 @@ export interface Comment {
   content: string
   startPos: number
   endPos: number
-  quotedText: string
+  quotedText?: string  // 改为可选
   resolved: boolean
   createdAt: string
   updatedAt: string
@@ -33,7 +33,7 @@ export interface CreateCommentDto {
   content: string
   startPos: number
   endPos: number
-  quotedText: string
+  quotedText?: string  // 改为可选
 }
 
 export interface CreateReplyDto {

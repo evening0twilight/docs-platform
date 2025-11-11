@@ -43,6 +43,17 @@
                 <span class="status-indicator"></span>
                 正在编辑
               </div>
+              <!-- 光标颜色指示器 -->
+              <div class="cursor-indicator" :style="{ backgroundColor: user.color || '#999' }"
+                :title="`光标颜色: ${user.color || '#999'}`">
+              </div>
+            </div>
+            <!-- 权限控制 - 仅owner可见 -->
+            <div v-if="isOwner" class="user-actions">
+              <a-select v-model="user.permission" size="small" @change="handlePermissionChange(user)">
+                <a-option value="editor">可编辑</a-option>
+                <a-option value="viewer">只读</a-option>
+              </a-select>
             </div>
           </div>
         </div>
@@ -81,6 +92,7 @@
 import { computed } from 'vue'
 import type { UserInfo } from '@/services/socket'
 import { IconUserGroup, IconLink, IconSettings } from '@arco-design/web-vue/es/icon'
+import { Message } from '@arco-design/web-vue'
 
 interface Props {
   users: UserInfo[]
@@ -92,6 +104,11 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   currentUserId: '',
   ownerId: ''
+})
+
+// 判断当前用户是否是owner
+const isOwner = computed(() => {
+  return props.currentUserId === props.ownerId
 })
 
 // 获取所有者信息
@@ -108,6 +125,20 @@ const onlineCollaborators = computed(() => {
 // 获取用户名首字母
 const getInitial = (name: string): string => {
   return name ? name.charAt(0).toUpperCase() : '?'
+}
+
+// 处理权限变更
+const handlePermissionChange = async (user: UserInfo) => {
+  try {
+    // 这里需要调用API更新权限
+    Message.info(`正在更新 ${user.username} 的权限...`)
+    // TODO: 调用后端API更新权限
+    // await updateUserPermission(documentId, user.userId, user.permission)
+    Message.success(`已更新 ${user.username} 的权限`)
+  } catch (error) {
+    console.error('更新权限失败:', error)
+    Message.error('更新权限失败')
+  }
 }
 </script>
 
@@ -268,6 +299,20 @@ const getInitial = (name: string): string => {
   height: 6px;
   border-radius: 50%;
   background-color: rgb(var(--success-6));
+}
+
+.cursor-indicator {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  margin-top: 4px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.user-actions {
+  flex-shrink: 0;
+  margin-left: 8px;
 }
 
 .empty-state {

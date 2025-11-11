@@ -1,5 +1,12 @@
 <template>
   <div class="mode-switcher">
+    <!-- 关闭所有功能按钮 -->
+    <a-tooltip content="关闭所有功能">
+      <a-button size="small" type="outline" status="danger" @click="handleCloseAll">
+        ✖ 关闭所有
+      </a-button>
+    </a-tooltip>
+
     <!-- AI 助手 -->
     <!-- <a-tooltip content="AI 助手">
       <a-button size="small" :type="currentMode === EditorMode.AI_ASSISTANT ? 'primary' : 'secondary'"
@@ -86,6 +93,7 @@ const emit = defineEmits<{
   switchMode: [mode: EditorMode]
   enableCollaboration: []
   disableCollaboration: []
+  closeAll: []
 }>()
 
 /**
@@ -93,6 +101,13 @@ const emit = defineEmits<{
  */
 const handleModeSwitch = (mode: EditorMode) => {
   emit('switchMode', mode)
+}
+
+/**
+ * 处理关闭所有功能
+ */
+const handleCloseAll = () => {
+  emit('closeAll')
 }
 
 /**

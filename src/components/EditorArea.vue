@@ -1,5 +1,8 @@
 <template>
-  <div class="editorContainer w-full h-full flex overflow-hidden">
+  <div 
+    class="editorContainer w-full h-full flex overflow-hidden"
+    :class="{ 'comment-mode': currentMode === EditorMode.COMMENT }"
+  >
     <!-- 主编辑区域 -->
     <div class="editor-main flex-1 flex flex-col overflow-hidden">
       <!-- 空状态：没有选择文档时显示 -->
@@ -46,7 +49,8 @@
             <ModeSwitcher :current-mode="editorModeStore.currentMode" :features="editorModeStore.documentFeatures"
               :online-users-count="collaboration?.onlineUsers.value.length || 0" :unread-comments-count="0"
               :is-document-owner="editorModeStore.permissions.isDocumentOwner" @switch-mode="handleModeSwitch"
-              @enable-collaboration="handleEnableCollaboration" @disable-collaboration="handleDisableCollaboration" />
+              @enable-collaboration="handleEnableCollaboration" @disable-collaboration="handleDisableCollaboration"
+              @close-all="handleCloseAll" />
           </div>
 
           <!-- 右侧:分享按钮(固定) -->
@@ -74,9 +78,12 @@
 
     <!-- 动态侧边栏（根据模式显示不同内容） -->
     <div v-if="editorModeStore.sidebarVisible && documentId" class="feature-sidebar"
-      :class="{ collapsed: sidebarCollapsed, 'collaboration-mode': editorModeStore.currentMode === EditorMode.COLLABORATION }">
-      <!-- 折叠按钮 -->
-      <div class="sidebar-toggle" @click="sidebarCollapsed = !sidebarCollapsed" :title="sidebarCollapsed ? '展开' : '收起'">
+      :class="{ collapsed: sidebarCollapsed, 'collaboration-mode': editorModeStore.currentMode === EditorMode.COLLABORATION }"
+      :style="sidebarCollapsed ? { top: sidebarDragPosition.y + 'px' } : {}">
+      <!-- 折叠按钮 - 收起时显示对应图标 -->
+      <div class="sidebar-toggle" @click="sidebarCollapsed = !sidebarCollapsed"
+        @mousedown="sidebarCollapsed ? startDrag($event) : null" :title="sidebarCollapsed ? '展开' : '收起'"
+        :class="{ draggable: sidebarCollapsed }">
         <span v-if="sidebarCollapsed">{{ getSidebarIcon() }}</span>
         <span v-else>▶</span>
       </div>
@@ -147,6 +154,9 @@ const tabsStore = useTabsStore()
 const editorModeStore = useEditorModeStore()
 const userStore = useUserStore()
 
+// 获取当前模式
+const currentMode = computed(() => editorModeStore.currentMode)
+
 // 计算当前文档ID
 const documentId = computed(() => props.id || route.params.id as string)
 
@@ -158,6 +168,39 @@ const isModified = ref(false)
 const isRemoteUpdate = ref(false) // 标记是否为远程更新,避免循环发送
 const sidebarCollapsed = ref(false) // 侧边栏折叠状态
 const shareDialogRef = ref<InstanceType<typeof ShareDialog>>() // 分享对话框ref
+
+// 侧边栏拖动相关
+const sidebarDragPosition = ref({ y: 100 }) // 侧边栏垂直位置
+const isDragging = ref(false)
+
+// 开始拖动
+const startDrag = (e: MouseEvent) => {
+  if (!sidebarCollapsed.value) return
+
+  isDragging.value = true
+  const startY = e.clientY
+  const startTop = sidebarDragPosition.value.y
+
+  const handleMouseMove = (moveEvent: MouseEvent) => {
+    if (!isDragging.value) return
+
+    const deltaY = moveEvent.clientY - startY
+    const newTop = startTop + deltaY
+
+    // 限制在可视范围内
+    const maxTop = window.innerHeight - 100
+    sidebarDragPosition.value.y = Math.max(50, Math.min(newTop, maxTop))
+  }
+
+  const handleMouseUp = () => {
+    isDragging.value = false
+    document.removeEventListener('mousemove', handleMouseMove)
+    document.removeEventListener('mouseup', handleMouseUp)
+  }
+
+  document.addEventListener('mousemove', handleMouseMove)
+  document.addEventListener('mouseup', handleMouseUp)
+}
 
 interface State {
   // editor: any
@@ -594,6 +637,12 @@ const handleModeSwitch = (mode: EditorMode) => {
   editorModeStore.switchMode(mode)
 }
 
+// 关闭所有功能
+const handleCloseAll = () => {
+  console.log('[EditorArea] 关闭所有功能')
+  editorModeStore.closeAllFeatures()
+}
+
 // 启用协作
 const handleEnableCollaboration = async () => {
   console.log('[EditorArea] 启用协作')
@@ -885,11 +934,22 @@ onBeforeUnmount(() => {
 }
 
 .feature-sidebar.collaboration-mode.collapsed {
-  width: 48px;
+  width: 56px;
+  height: 56px;
+  bottom: auto;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--color-border);
 }
 
 .feature-sidebar.collapsed {
-  width: 40px;
+  width: 56px;
+  height: 56px;
+  position: absolute;
+  right: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid var(--color-border);
 }
 
 .feature-sidebar .sidebar-content {
@@ -925,16 +985,36 @@ onBeforeUnmount(() => {
 }
 
 .feature-sidebar.collapsed .sidebar-toggle {
-  left: 8px;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-fill-2);
+  font-size: 24px;
+  transform: none;
+}
+
+.feature-sidebar.collapsed .sidebar-toggle.draggable {
+  cursor: move;
+}
+
+.feature-sidebar.collapsed .sidebar-toggle.draggable:active {
+  cursor: grabbing;
 }
 
 .feature-sidebar.collaboration-mode.collapsed .sidebar-toggle {
-  left: 10px;
-  font-size: 18px;
+  left: 0;
+  font-size: 24px;
+  border-radius: 8px;
 }
 
 .feature-sidebar .sidebar-toggle:hover {
   background: var(--color-fill-3);
+}
+
+.feature-sidebar:not(.collapsed) .sidebar-toggle:hover {
   transform: translateY(-50%) scale(1.05);
 }
 
@@ -1142,8 +1222,8 @@ onBeforeUnmount(() => {
   border-radius: 0.25rem;
 }
 
-/* 评论高亮样式 */
-.editorContainer :deep(.ProseMirror .comment-highlight) {
+/* 评论高亮样式 - 只在评论模式下显示 */
+.editorContainer.comment-mode :deep(.ProseMirror .comment-highlight) {
   background-color: rgba(var(--warning-6), 0.2);
   border-bottom: 2px solid rgb(var(--warning-6));
   cursor: pointer;
@@ -1151,12 +1231,19 @@ onBeforeUnmount(() => {
   padding: 2px 0;
 }
 
-.editorContainer :deep(.ProseMirror .comment-highlight:hover) {
+.editorContainer.comment-mode :deep(.ProseMirror .comment-highlight:hover) {
   background-color: rgba(var(--warning-6), 0.3);
 }
 
+/* 非评论模式下隐藏高亮效果 */
+.editorContainer:not(.comment-mode) :deep(.ProseMirror .comment-highlight) {
+  background-color: transparent;
+  border-bottom: none;
+  cursor: text;
+}
+
 /* 评论高亮闪烁动画 */
-.editorContainer :deep(.ProseMirror .comment-highlight-flash) {
+.editorContainer.comment-mode :deep(.ProseMirror .comment-highlight-flash) {
   animation: comment-flash 2s ease-in-out;
 }
 

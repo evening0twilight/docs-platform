@@ -158,8 +158,25 @@ const loadComments = async () => {
   if (!props.documentId) return
 
   try {
-    const res = await getComments(props.documentId)
-    comments.value = res.data || []
+    const res = await getComments(props.documentId) as any
+    // 响应拦截器已经解包,直接使用 res
+    // 但需要转换数据格式
+    const commentsData = Array.isArray(res) ? res : []
+    comments.value = commentsData.map((c: any) => ({
+      id: String(c.id),
+      documentId: String(c.documentId),
+      userId: String(c.userId),
+      username: c.user?.username || '未知用户',
+      avatar: c.user?.avatar,
+      content: c.content,
+      startPos: c.startPos,
+      endPos: c.endPos,
+      quotedText: c.quotedText,
+      resolved: c.resolved,
+      createdAt: c.createdAt,
+      updatedAt: c.updatedAt,
+      replies: [] // 稍后加载
+    }))
   } catch (error) {
     console.warn('[CommentList] 后端 API 未就绪，使用 Mock 数据', error)
     loadMockComments()
@@ -187,17 +204,39 @@ const handleCreateComment = async () => {
 
   creating.value = true
   try {
-    const commentData = {
+    const commentData: any = {
       documentId: props.documentId,
       content: newCommentContent.value,
       startPos: selectionRange.value.from,
-      endPos: selectionRange.value.to,
-      quotedText: selectedText.value
+      endPos: selectionRange.value.to
+    }
+    
+    // 只有当有选中文本时才添加 quotedText
+    if (selectedText.value && selectedText.value.trim()) {
+      commentData.quotedText = selectedText.value
     }
 
     try {
-      const res = await createComment(commentData)
-      comments.value.unshift(res.data)
+      const res = await createComment(commentData) as any
+      
+      // 转换后端数据格式为前端格式
+      const comment: Comment = {
+        id: String(res.id),
+        documentId: String(res.documentId),
+        userId: String(res.userId),
+        username: res.user?.username || '未知用户',
+        avatar: res.user?.avatar,
+        content: res.content,
+        startPos: res.startPos,
+        endPos: res.endPos,
+        quotedText: res.quotedText,
+        resolved: res.resolved,
+        createdAt: res.createdAt,
+        updatedAt: res.updatedAt,
+        replies: []
+      }
+      
+      comments.value.unshift(comment)
 
       if (props.editor) {
         props.editor.chain()
@@ -207,7 +246,7 @@ const handleCreateComment = async () => {
             to: selectionRange.value.to
           })
           .setCommentMark({
-            commentId: res.data.id,
+            commentId: comment.id,
             userId: userStore.userInfo?.id,
             timestamp: Date.now()
           })

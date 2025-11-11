@@ -12,7 +12,9 @@ export const getComments = (documentId: string, params?: { resolved?: boolean; i
  * 创建评论（顶级评论或回复）
  */
 export const createComment = (data: CreateCommentDto) => {
-  return request.post<Comment>(`/documents/${data.documentId}/comments`, data)
+  // 从 data 中提取 documentId，其余字段发送给后端
+  const { documentId, ...commentData } = data
+  return request.post<Comment>(`/documents/${documentId}/comments`, commentData)
 }
 
 /**

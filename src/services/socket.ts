@@ -14,6 +14,7 @@ export interface UserInfo {
   avatar?: string
   color?: string
   socketId?: string
+  permission?: 'editor' | 'viewer' // 用户权限
 }
 
 export interface DocumentEdit {
@@ -60,6 +61,10 @@ class SocketService {
   public isAuthenticated = ref(false)
   public onlineUsers = ref<UserInfo[]>([])
   public currentUser = ref<UserInfo | null>(null)
+
+  // 回调函数集合
+  private permissionUpdateCallbacks: ((data: any) => void)[] = []
+  private collaborationToggleCallbacks: ((data: any) => void)[] = []
 
   /**
    * 初始化并连接到 WebSocket 服务器
@@ -266,6 +271,29 @@ class SocketService {
       console.error('[Socket] 错误:', error)
     })
 
+    // ====== 权限更新事件 ======
+    this.socket.on('permission-updated', (data) => {
+      console.log('[Socket] 📝 权限已更新:', data)
+      // 触发权限更新回调
+      this.permissionUpdateCallbacks.forEach(callback => {
+        callback(data)
+      })
+    })
+
+    this.socket.on('document-permission-changed', (data) => {
+      console.log('[Socket] 📝 文档权限已变更:', data)
+      // 可以用于通知owner权限变更成功
+    })
+
+    // ====== 协同功能开关事件 ======
+    this.socket.on('collaboration-toggled', (data) => {
+      console.log('[Socket] 🔄 协同功能状态变化:', data)
+      // 触发协同状态变化回调
+      this.collaborationToggleCallbacks.forEach(callback => {
+        callback(data)
+      })
+    })
+
     // ====== 调试: 监听所有事件 ======
     this.socket.onAny((eventName: string, ...args: any[]) => {
       console.log('[Socket] 📥 收到事件:', eventName, args)
@@ -410,6 +438,32 @@ class SocketService {
   onChatMessage(callback: (data: any) => void): (() => void) {
     this.socket?.on('chat-message', callback)
     return () => this.socket?.off('chat-message', callback)
+  }
+
+  /**
+   * 监听权限更新
+   */
+  onPermissionUpdate(callback: (data: any) => void): (() => void) {
+    this.permissionUpdateCallbacks.push(callback)
+    return () => {
+      const index = this.permissionUpdateCallbacks.indexOf(callback)
+      if (index > -1) {
+        this.permissionUpdateCallbacks.splice(index, 1)
+      }
+    }
+  }
+
+  /**
+   * 监听协同功能开关
+   */
+  onCollaborationToggle(callback: (data: any) => void): (() => void) {
+    this.collaborationToggleCallbacks.push(callback)
+    return () => {
+      const index = this.collaborationToggleCallbacks.indexOf(callback)
+      if (index > -1) {
+        this.collaborationToggleCallbacks.splice(index, 1)
+      }
+    }
   }
 
   /**

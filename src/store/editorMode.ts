@@ -159,11 +159,17 @@ export const useEditorModeStore = defineStore('editorMode', () => {
     try {
       isSwitching.value = true
       
+      // 记录旧模式用于提示
+      const oldMode = currentMode.value
+      
       // 更新模式
       currentMode.value = newMode
       
       // 更新侧边栏
       updateSidebar(newMode)
+      
+      // 显示切换提示
+      showModeSwitchMessage(oldMode, newMode)
       
       console.log(`[EditorMode] 切换到模式: ${newMode}`)
       
@@ -175,6 +181,57 @@ export const useEditorModeStore = defineStore('editorMode', () => {
     } finally {
       isSwitching.value = false
     }
+  }
+  
+  /**
+   * 显示模式切换提示
+   */
+  const showModeSwitchMessage = (oldMode: EditorMode, newMode: EditorMode) => {
+    const modeNames: Record<EditorMode, string> = {
+      [EditorMode.NORMAL]: '正常编辑',
+      [EditorMode.COLLABORATION]: '协同编辑',
+      [EditorMode.AI_ASSISTANT]: 'AI 助手',
+      [EditorMode.COMMENT]: '评论',
+      [EditorMode.HISTORY]: '历史版本',
+      [EditorMode.READ_ONLY]: '只读模式',
+    }
+    
+    const oldModeName = modeNames[oldMode]
+    const newModeName = modeNames[newMode]
+    
+    if (oldMode !== EditorMode.NORMAL && newMode !== EditorMode.NORMAL) {
+      Message.info(`${oldModeName}功能已关闭，${newModeName}功能已打开`)
+    } else if (newMode === EditorMode.NORMAL) {
+      Message.success(`${oldModeName}功能已关闭`)
+    } else {
+      Message.success(`${newModeName}功能已打开`)
+    }
+  }
+  
+  /**
+   * 关闭所有功能 - 回到正常编辑模式
+   */
+  const closeAllFeatures = () => {
+    if (currentMode.value === EditorMode.NORMAL) {
+      Message.info('当前已是正常编辑模式')
+      return
+    }
+    
+    const oldMode = currentMode.value
+    currentMode.value = EditorMode.NORMAL
+    sidebarVisible.value = false
+    sidebarContent.value = null
+    
+    const modeNames: Record<EditorMode, string> = {
+      [EditorMode.NORMAL]: '正常编辑',
+      [EditorMode.COLLABORATION]: '协同编辑',
+      [EditorMode.AI_ASSISTANT]: 'AI 助手',
+      [EditorMode.COMMENT]: '评论',
+      [EditorMode.HISTORY]: '历史版本',
+      [EditorMode.READ_ONLY]: '只读模式',
+    }
+    
+    Message.success(`已关闭所有功能（${modeNames[oldMode]}）`)
   }
   
   /**
@@ -284,5 +341,6 @@ export const useEditorModeStore = defineStore('editorMode', () => {
     setDocumentFeatures,
     setPermissions,
     reset,
+    closeAllFeatures, // 新增: 关闭所有功能
   }
 })
