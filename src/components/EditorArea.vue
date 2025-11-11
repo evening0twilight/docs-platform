@@ -101,7 +101,10 @@
         <CollaborationUsers v-else-if="editorModeStore.currentMode === EditorMode.COLLABORATION"
           :users="collaboration?.onlineUsers.value || []" :is-connected="collaboration?.isConnected.value || false"
           :current-user-id="String(userStore.userInfo?.id || '')"
-          :owner-id="String(documentData?.creatorId || documentData?.userId || '')" />
+          :owner-id="String(documentData?.creatorId || documentData?.userId || '')" 
+          :document-id="documentId"
+          :collaboration-enabled="documentData?.isCollaborationEnabled ?? false"
+          @collaboration-toggled="handleCollaborationToggled" />
 
         <!-- 历史版本 -->
         <HistoryTimeline v-else-if="editorModeStore.currentMode === EditorMode.HISTORY" />
@@ -130,6 +133,7 @@ import StarterKit from '@tiptap/starter-kit'
 import TaskList from '@tiptap/extension-task-list'
 import TaskItem from '@tiptap/extension-task-item'
 import Image from '@tiptap/extension-image'
+import CollaborationCursor from '@tiptap/extension-collaboration-cursor'
 import { CommentMark } from '@/extensions/CommentMark'
 import ToolList from './editor/ToolList.vue';
 import ModeSwitcher from './editor/ModeSwitcher.vue';
@@ -168,6 +172,7 @@ const isModified = ref(false)
 const isRemoteUpdate = ref(false) // 标记是否为远程更新,避免循环发送
 const sidebarCollapsed = ref(false) // 侧边栏折叠状态
 const shareDialogRef = ref<InstanceType<typeof ShareDialog>>() // 分享对话框ref
+const userColor = ref<string>('#9b59b6') // 当前用户光标颜色
 
 // 侧边栏拖动相关
 const sidebarDragPosition = ref({ y: 100 }) // 侧边栏垂直位置
@@ -282,6 +287,22 @@ const applyRemoteEdit = (edit: any) => {
 let collaboration: ReturnType<typeof useCollaboration> | null = null
 let onlineUsers = ref([])
 let isConnected = ref(false)
+
+// 监听socket认证成功,获取用户颜色
+watch(() => socketService.currentUser.value, (user) => {
+  if (user && user.color) {
+    userColor.value = user.color
+    console.log('[EditorArea] 用户颜色已更新:', user.color)
+    
+    // 更新编辑器中的用户信息
+    if (editor.value) {
+      editor.value.commands.updateUser({
+        name: userStore.userInfo?.name || '匿名用户',
+        color: user.color,
+      })
+    }
+  }
+})
 
 // ⭐ 监听 documentId 变化，动态加入/离开文档房间
 watch(documentId, (newId, oldId) => {
@@ -427,11 +448,7 @@ const editor = useEditor({
         levels: [1, 2, 3, 4, 5, 6],
       },
     }),
-    Underline.configure({
-      HTMLAttributes: {
-        class: 'my-custom-class',
-      },
-    }),
+    Underline, // StarterKit不包含Underline,需要单独添加
     Highlight.configure({
       multicolor: true,
       HTMLAttributes: {
@@ -504,9 +521,25 @@ const fetchDocument = async () => {
     // 设置编辑器内容
     editor.value.commands.setContent(doc.content || '')
 
-    // 根据权限设置编辑器是否可编辑
+    // 根据权限和协同开关状态设置编辑器是否可编辑
     const permission = (doc as any).permission
-    const isEditable = permission === 'owner' || permission === 'editor'
+    const isCollaborationEnabled = (doc as any).isCollaborationEnabled
+    
+    // 判断可编辑性:
+    // 1. Owner总是可编辑
+    // 2. 非Owner且协同未开启: 只读
+    // 3. 非Owner且协同已开启: 根据permission判断(editor可编辑,viewer只读)
+    let isEditable = false
+    if (permission === 'owner') {
+      isEditable = true
+    } else if (!isCollaborationEnabled) {
+      // 协同未开启,所有非owner用户只读
+      isEditable = false
+    } else {
+      // 协同已开启,根据permission判断
+      isEditable = permission === 'editor'
+    }
+    
     editor.value.setEditable(isEditable)
 
     // ⭐ 更新编辑器模式 store 的权限信息
@@ -520,11 +553,22 @@ const fetchDocument = async () => {
     editorModeStore.permissions.canComment = isEditable || permission === 'viewer'
     editorModeStore.permissions.hasAIAccess = true // 假设所有用户都有AI访问权限
 
-    console.log('[EditorArea] 权限更新:', editorModeStore.permissions)
+    console.log('[EditorArea] 权限更新:', {
+      permission,
+      isCollaborationEnabled,
+      isEditable,
+      ...editorModeStore.permissions
+    })
 
-    // 如果是只读权限，提示用户
+    // 提示用户权限状态
     if (!isEditable && permission === 'viewer') {
-      Message.info('您只有查看权限，无法编辑此文档')
+      if (!isCollaborationEnabled) {
+        Message.info('文档协同编辑未开启,您只能查看')
+      } else {
+        Message.info('您只有查看权限,无法编辑此文档')
+      }
+    } else if (!isEditable && permission === 'editor' && !isCollaborationEnabled) {
+      Message.warning('文档协同编辑已关闭,您暂时只能查看')
     }
 
     // 更新标签标题
@@ -686,6 +730,46 @@ const handleDisableCollaboration = () => {
   }
 }
 
+// 处理协同开关切换
+const handleCollaborationToggled = async (enabled: boolean) => {
+  console.log('[EditorArea] 协同开关切换:', enabled)
+  
+  // 重新加载文档信息以获取最新状态
+  if (documentId.value) {
+    try {
+      const doc = await getDocument(documentId.value)
+      documentData.value = doc
+      
+      const permission = (doc as any).permission
+      const isCollaborationEnabled = enabled
+      
+      // 判断可编辑性(与fetchDocument中逻辑一致)
+      let isEditable = false
+      if (permission === 'owner') {
+        isEditable = true
+      } else if (!isCollaborationEnabled) {
+        isEditable = false
+      } else {
+        isEditable = permission === 'editor'
+      }
+      
+      editor.value?.setEditable(isEditable)
+      
+      // 更新store权限信息
+      editorModeStore.permissions.canEdit = isEditable
+      
+      // 提示用户
+      if (!isEditable && permission === 'editor' && !isCollaborationEnabled) {
+        Message.warning('协同编辑已关闭,您暂时只能查看')
+      } else if (isEditable && permission === 'editor' && isCollaborationEnabled) {
+        Message.success('协同编辑已开启,您可以编辑文档')
+      }
+    } catch (error) {
+      console.error('[EditorArea] 重新加载文档失败:', error)
+    }
+  }
+}
+
 // 获取侧边栏图标
 const getSidebarIcon = () => {
   switch (editorModeStore.currentMode) {
@@ -736,6 +820,16 @@ onMounted(() => {
 
   // 添加事件监听器
   window.addEventListener('manual-save-request', handleGlobalSave)
+  
+  // 监听协同状态变化
+  socketService.onCollaborationToggle((data) => {
+    console.log('[EditorArea] 收到协同状态变化通知:', data)
+    
+    // 如果是当前文档
+    if (String(data.documentId) === String(documentId.value)) {
+      handleCollaborationToggled(data.enabled)
+    }
+  })
 
   // 组件卸载时移除监听器
   onBeforeUnmount(() => {
@@ -771,36 +865,17 @@ onBeforeUnmount(() => {
   padding-right: 12px;
   position: relative;
   z-index: 10;
+  overflow-x: auto; /* 添加滚动 */
 }
 
-/* 左侧工具区域 - 可横向滚动 */
+/* 左侧工具区域 - 保持原有大小,可横向滚动 */
 .toolbar-tools {
-  flex: 0 1 auto;
-  overflow-x: auto;
-  overflow-y: hidden;
-  min-width: 200px;
-  max-width: 50%;
-
-  /* 隐藏滚动条但保留滚动功能 */
-  scrollbar-width: thin;
-  scrollbar-color: #dcdfe6 transparent;
-}
-
-.toolbar-tools::-webkit-scrollbar {
-  height: 4px;
-}
-
-.toolbar-tools::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.toolbar-tools::-webkit-scrollbar-thumb {
-  background: #dcdfe6;
-  border-radius: 2px;
-}
-
-.toolbar-tools::-webkit-scrollbar-thumb:hover {
-  background: #c0c4cc;
+  flex: 0 0 auto; /* 不伸缩 */
+  display: flex;
+  align-items: center;
+  white-space: nowrap; /* 防止换行 */
+  overflow: visible; /* 允许内容显示 */
+  min-width: min-content; /* 至少容纳内容 */
 }
 
 /* 中间模式切换区域 */

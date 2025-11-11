@@ -241,6 +241,33 @@ class SocketService {
       this.currentDocumentId = null
     })
 
+    // ====== 6. 强制登出事件 ======
+    this.socket.on('force-logout', (data) => {
+      console.warn('[Socket] ⚠️ 强制登出:', data)
+      
+      // 断开socket连接
+      this.disconnect()
+      
+      // 清除本地存储
+      localStorage.removeItem('token')
+      sessionStorage.removeItem('token')
+      localStorage.removeItem('user-store')
+      sessionStorage.removeItem('user-store')
+      
+      // 动态导入以避免循环依赖
+      import('@arco-design/web-vue').then(({ Modal }) => {
+        Modal.warning({
+          title: '账号已在其他地方登录',
+          content: '您的账号已在其他设备登录。如果不是您本人操作，请立即修改密码或邮箱以确保账号安全！',
+          okText: '重新登录',
+          onOk: () => {
+            // 跳转到登录页
+            window.location.href = '/login'
+          },
+        })
+      })
+    })
+
     this.socket.on('reconnect', (attemptNumber) => {
       console.log(`[Socket] 重连成功 (尝试 ${attemptNumber} 次)`)
       

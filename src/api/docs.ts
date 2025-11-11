@@ -36,6 +36,11 @@ interface DocumentResponse {
   isDeleted: boolean;
   isPinned?: boolean;
   permission?: 'owner' | 'editor' | 'viewer';
+  isCollaborationEnabled?: boolean;
+  creator?: {
+    id: number;
+    username: string;
+  };
   children?: DocumentResponse[];
   created_time: string;
   updated_time: string;
@@ -440,6 +445,52 @@ export const moveFolder = async (
     return response;
   } catch (error) {
     console.error('移动文件夹失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 更新文档权限
+ */
+export const updateDocumentPermission = async (
+  documentId: number,
+  permissionId: number,
+  role: 'editor' | 'viewer'
+): Promise<any> => {
+  try {
+    const response = await http.put(`/documents/${documentId}/permissions/${permissionId}`, { role });
+    return response;
+  } catch (error) {
+    console.error('更新文档权限失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 获取文档权限列表
+ */
+export const getDocumentPermissions = async (documentId: number): Promise<any[]> => {
+  try {
+    const response = await http.get(`/documents/${documentId}/permissions`);
+    return response;
+  } catch (error) {
+    console.error('获取文档权限列表失败:', error);
+    throw error;
+  }
+}
+
+/**
+ * 切换文档协同编辑开关
+ */
+export const toggleCollaboration = async (
+  documentId: number,
+  enabled: boolean
+): Promise<{ isCollaborationEnabled: boolean; affectedPermissions: number }> => {
+  try {
+    const response = await http.put(`/documents/${documentId}/collaboration-toggle`, { enabled });
+    return response;
+  } catch (error) {
+    console.error('切换协同开关失败:', error);
     throw error;
   }
 }
