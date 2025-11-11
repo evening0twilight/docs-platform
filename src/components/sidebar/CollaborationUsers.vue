@@ -65,7 +65,44 @@
 
       <!-- 协作控制 -->
       <div class="section">
-        <div class="section-title">协作信息</div>
+        <div class="section-title">协作设置</div>
+        
+        <!-- 仅所有者可见协同开关 -->
+        <div v-if="isOwner" class="collaboration-control">
+          <div class="control-header">
+            <span class="control-label">📡 协同编辑</span>
+            <a-switch 
+              v-model="isCollaborationEnabled" 
+              @change="handleCollaborationToggle"
+              :loading="toggleLoading"
+            />
+          </div>
+          <div class="control-hint">
+            <p v-if="isCollaborationEnabled" class="hint-text success">
+              ✅ 协同编辑已启用,其他用户可以编辑文档
+            </p>
+            <p v-else class="hint-text warning">
+              ⚠️ 协同编辑已关闭,所有用户只能查看
+            </p>
+          </div>
+        </div>
+        
+        <!-- 非所有者显示协同状态 -->
+        <div v-else class="collaboration-status">
+          <a-alert 
+            :type="isCollaborationEnabled ? 'success' : 'warning'" 
+            banner
+          >
+            <template v-if="isCollaborationEnabled">
+              实时协同编辑已启用
+            </template>
+            <template v-else>
+              当前文档未开启协同,您只能查看
+            </template>
+          </a-alert>
+        </div>
+        
+        <!-- 协作信息 -->
         <div class="collaboration-info">
           <a-space direction="vertical" fill>
             <div class="info-item">
@@ -80,30 +117,45 @@
             </div>
           </a-space>
         </div>
-        <a-alert type="success" banner style="margin-top: 12px">
-          实时协同编辑已启用
-        </a-alert>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { UserInfo } from '@/services/socket'
-import { IconUserGroup, IconLink, IconSettings } from '@arco-design/web-vue/es/icon'
+import { IconUserGroup } from '@arco-design/web-vue/es/icon'
 import { Message } from '@arco-design/web-vue'
+import { updateDocumentPermission, getDocumentPermissions, toggleCollaboration } from '@/api/docs'
 
 interface Props {
   users: UserInfo[]
   isConnected: boolean
   currentUserId?: string
   ownerId?: string
+  documentId?: string | number
+  collaborationEnabled?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   currentUserId: '',
-  ownerId: ''
+  ownerId: '',
+  documentId: '',
+  collaborationEnabled: false
+})
+
+const emit = defineEmits<{
+  'collaboration-toggled': [enabled: boolean]
+}>()
+
+// 协同开关状态
+const isCollaborationEnabled = ref(props.collaborationEnabled)
+const toggleLoading = ref(false)
+
+// 监听props变化
+watch(() => props.collaborationEnabled, (newVal) => {
+  isCollaborationEnabled.value = newVal
 })
 
 // 判断当前用户是否是owner
@@ -127,14 +179,63 @@ const getInitial = (name: string): string => {
   return name ? name.charAt(0).toUpperCase() : '?'
 }
 
+// 处理协同开关切换
+const handleCollaborationToggle = async (enabled: boolean) => {
+  if (!props.documentId) {
+    Message.error('无法获取文档ID')
+    isCollaborationEnabled.value = !enabled // 恢复原状态
+    return
+  }
+  
+  toggleLoading.value = true
+  try {
+    const result = await toggleCollaboration(Number(props.documentId), enabled)
+    
+    if (enabled) {
+      Message.success('协同编辑已开启')
+    } else {
+      Message.warning(`协同编辑已关闭,${result.affectedPermissions}位编辑者权限已降为只读`)
+    }
+    
+    emit('collaboration-toggled', enabled)
+  } catch (error) {
+    console.error('切换协同开关失败:', error)
+    Message.error('操作失败,请重试')
+    isCollaborationEnabled.value = !enabled // 恢复原状态
+  } finally {
+    toggleLoading.value = false
+  }
+}
+
 // 处理权限变更
 const handlePermissionChange = async (user: UserInfo) => {
+  if (!props.documentId) {
+    Message.error('无法获取文档ID')
+    return
+  }
+  
   try {
-    // 这里需要调用API更新权限
     Message.info(`正在更新 ${user.username} 的权限...`)
-    // TODO: 调用后端API更新权限
-    // await updateUserPermission(documentId, user.userId, user.permission)
-    Message.success(`已更新 ${user.username} 的权限`)
+    
+    // 首先获取权限列表,找到该用户的permissionId
+    const permissions = await getDocumentPermissions(Number(props.documentId))
+    const userPermission = permissions.find((p: any) => p.userId === Number(user.userId))
+    
+    if (!userPermission) {
+      Message.error('未找到该用户的权限记录')
+      return
+    }
+    
+    // 更新权限
+    await updateDocumentPermission(
+      Number(props.documentId),
+      userPermission.id,
+      user.permission as 'editor' | 'viewer'
+    )
+    
+    Message.success(`已更新 ${user.username} 的权限为${user.permission === 'editor' ? '可编辑' : '只读'}`)
+    
+    // TODO: 通过WebSocket通知被修改的用户
   } catch (error) {
     console.error('更新权限失败:', error)
     Message.error('更新权限失败')
@@ -324,6 +425,51 @@ const handlePermissionChange = async (user: UserInfo) => {
 .empty-state p {
   margin: 8px 0 0 0;
   font-size: 13px;
+}
+
+.collaboration-control {
+  padding: 12px;
+  background: var(--color-fill-1);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.control-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.control-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-1);
+}
+
+.control-hint {
+  margin-top: 8px;
+}
+
+.hint-text {
+  font-size: 12px;
+  margin: 0;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.hint-text.success {
+  color: rgb(var(--success-6));
+  background: rgb(var(--success-1));
+}
+
+.hint-text.warning {
+  color: rgb(var(--warning-6));
+  background: rgb(var(--warning-1));
+}
+
+.collaboration-status {
+  margin-bottom: 12px;
 }
 
 .collaboration-info {
