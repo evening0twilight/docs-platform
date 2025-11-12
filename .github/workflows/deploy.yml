@@ -138,6 +138,8 @@ jobs:
             echo "✅ 解压成功!"
             echo "📁 解压后的文件:"
             ls -lh "${{ secrets.DEPLOY_PATH }}/index.html"
+            echo "📦 Assets文件:"
+            ls -lh "${{ secrets.DEPLOY_PATH }}/assets/" | head -10
             
             # 清理临时文件
             rm -f /tmp/deploy.tar.gz
@@ -170,6 +172,10 @@ jobs:
             # 重启 Nginx
             echo "🔄 重启nginx..."
             sudo systemctl restart nginx
+            
+            # 强制刷新文件系统缓存
+            echo "💾 刷新文件系统缓存..."
+            sync
             
             # 显示最终结果
             echo ""
