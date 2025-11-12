@@ -237,6 +237,13 @@ jobs:
             echo "📊 Nginx配置检查:"
             echo "- sites-available配置: $(grep -c 'etag off' /etc/nginx/sites-available/onespecial.me 2>/dev/null || echo '未找到etag off')"
             echo "- 符号链接状态: $(ls -l /etc/nginx/sites-enabled/onespecial.me 2>/dev/null || echo '符号链接不存在')"
+            
+            echo ""
+            echo "🔍 Nginx root路径诊断:"
+            echo "- 配置中的root: $(grep -E '^\s*root\s+' /etc/nginx/sites-available/onespecial.me | head -1)"
+            echo "- 实际文件大小: $(stat -c %s ${{ secrets.DEPLOY_PATH }}/index.html) 字节"
+            echo "- 尝试找到458字节的index.html:"
+            find /var/www -name "index.html" -size 458c 2>/dev/null || echo "未找到458字节的index.html"
             echo ""
             echo "✅ Deployment completed successfully!"
 
