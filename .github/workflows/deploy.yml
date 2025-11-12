@@ -160,29 +160,48 @@ jobs:
               echo "✅ nginx缓存已清除"
             fi
             
-            # ⭐ 更新 Nginx 配置（新增）
+            # ⭐ 更新 Nginx 配置(新增)
             if [ -f "/tmp/nginx.conf" ]; then
-              echo "Updating Nginx configuration..."
+              echo "📝 更新Nginx配置..."
               sudo cp /etc/nginx/sites-available/onespecial.me /etc/nginx/sites-available/onespecial.me.backup
               sudo cp /tmp/nginx.conf /etc/nginx/sites-available/onespecial.me
-              sudo nginx -t && echo "✅ Nginx config test passed" || echo "❌ Nginx config test failed"
+              sudo nginx -t && echo "✅ Nginx配置测试通过" || {
+                echo "❌ Nginx配置测试失败,恢复备份"
+                sudo cp /etc/nginx/sites-available/onespecial.me.backup /etc/nginx/sites-available/onespecial.me
+                exit 1
+              }
               rm -f /tmp/nginx.conf
             fi
             
-            # 重启 Nginx
-            echo "🔄 重启nginx..."
-            sudo systemctl restart nginx
+            # 重启 Nginx (使用stop + start确保完全重启)
+            echo "🔄 停止nginx..."
+            sudo systemctl stop nginx
             
             # 强制刷新文件系统缓存
             echo "💾 刷新文件系统缓存..."
             sync
+            
+            # 等待1秒确保nginx完全停止
+            sleep 1
+            
+            echo "🚀 启动nginx..."
+            sudo systemctl start nginx
+            
+            # 等待nginx完全启动
+            sleep 2
+            
+            # 验证部署结果
+            echo ""
+            echo "🔍 验证部署结果..."
+            RESPONSE=$(curl -sI https://onespecial.me | grep -E "Last-Modified|Content-Length|ETag")
+            echo "$RESPONSE"
             
             # 显示最终结果
             echo ""
             echo "=" "=" "=" "=" "=" "=" "=" "=" "=" "="
             echo "📊 部署完成! 最终状态:"
             echo "=" "=" "=" "=" "=" "=" "=" "=" "=" "="
-            echo "� 文件信息:"
+            echo "📄 文件信息:"
             ls -lh ${{ secrets.DEPLOY_PATH }}/index.html
             echo ""
             echo "📅 文件修改时间: $(stat -c %y ${{ secrets.DEPLOY_PATH }}/index.html)"
