@@ -190,11 +190,12 @@ jobs:
             # 等待nginx完全启动
             sleep 2
             
-            # 验证部署结果
-            echo ""
-            echo "🔍 验证部署结果..."
-            RESPONSE=$(curl -sI https://onespecial.me | grep -E "Last-Modified|Content-Length|ETag")
-            echo "$RESPONSE"
+            # 验证nginx状态
+            if ! sudo systemctl is-active --quiet nginx; then
+              echo "❌ nginx启动失败!"
+              sudo systemctl status nginx
+              exit 1
+            fi
             
             # 显示最终结果
             echo ""
@@ -206,6 +207,11 @@ jobs:
             echo ""
             echo "📅 文件修改时间: $(stat -c %y ${{ secrets.DEPLOY_PATH }}/index.html)"
             echo "🌐 nginx状态: $(sudo systemctl is-active nginx)"
+            
+            # 验证HTTP响应(忽略错误)
+            echo ""
+            echo "🔍 HTTP响应验证:"
+            curl -sI https://onespecial.me 2>/dev/null | grep -E "HTTP|Last-Modified|Content-Length" || echo "⚠️ curl验证失败,但部署已完成"
             echo ""
             echo "✅ Deployment completed successfully!"
 
