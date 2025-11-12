@@ -69,9 +69,22 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
           script: |
+            echo "🔍 开始部署流程..."
+            echo "📍 部署路径: ${{ secrets.DEPLOY_PATH }}"
+            echo "📅 当前时间: $(date)"
+            
+            # 检查部署路径
+            if [ ! -d "${{ secrets.DEPLOY_PATH }}" ]; then
+              echo "⚠️  部署路径不存在,将创建..."
+            else
+              echo "✅ 部署路径存在"
+              echo "📂 当前文件列表:"
+              ls -lh ${{ secrets.DEPLOY_PATH }}/index.html 2>/dev/null || echo "index.html 不存在"
+            fi
+            
             # 创建备份
             if [ -d "${{ secrets.DEPLOY_PATH }}" ]; then
-              echo "Creating backup..."
+              echo "💾 Creating backup..."
               sudo rm -rf ${{ secrets.DEPLOY_PATH }}.backup
               sudo cp -r ${{ secrets.DEPLOY_PATH }} ${{ secrets.DEPLOY_PATH }}.backup
             fi
@@ -80,25 +93,42 @@ jobs:
             sudo mkdir -p ${{ secrets.DEPLOY_PATH }}
             
             # 清空当前部署目录
+            echo "🗑️  清空部署目录..."
             sudo rm -rf ${{ secrets.DEPLOY_PATH }}/*
             
+            # 检查压缩包
+            if [ ! -f "/tmp/deploy.tar.gz" ]; then
+              echo "❌ 错误: /tmp/deploy.tar.gz 不存在!"
+              exit 1
+            fi
+            echo "✅ 压缩包存在: $(ls -lh /tmp/deploy.tar.gz)"
+            
             # 解压新文件
+            echo "📦 解压文件到 ${{ secrets.DEPLOY_PATH }}..."
             cd ${{ secrets.DEPLOY_PATH }}
             sudo tar -xzf /tmp/deploy.tar.gz
+            
+            # 验证解压结果
+            echo "📁 解压后的文件:"
+            ls -lh ${{ secrets.DEPLOY_PATH }}/index.html
             
             # 清理临时文件
             rm -f /tmp/deploy.tar.gz
             
             # 设置权限
+            echo "🔐 设置文件权限..."
             sudo chown -R www-data:www-data ${{ secrets.DEPLOY_PATH }}
             sudo chmod -R 755 ${{ secrets.DEPLOY_PATH }}
             
-            # 强制更新文件时间戳
-            sudo touch -r /tmp/deploy.tar.gz ${{ secrets.DEPLOY_PATH }}/*
+            # 更新文件时间戳
+            echo "⏰ 更新文件时间戳..."
+            sudo find ${{ secrets.DEPLOY_PATH }} -type f -exec touch {} \;
             
-            # 清除nginx缓存(如果存在)
+            # 清除nginx缓存
+            echo "🧹 清除nginx缓存..."
             if [ -d "/var/cache/nginx" ]; then
               sudo rm -rf /var/cache/nginx/*
+              echo "✅ nginx缓存已清除"
             fi
             
             # ⭐ 更新 Nginx 配置（新增）
@@ -110,13 +140,21 @@ jobs:
               rm -f /tmp/nginx.conf
             fi
             
-            # 重启 Nginx (使用restart而不是reload以确保清除所有缓存)
+            # 重启 Nginx
+            echo "🔄 重启nginx..."
             sudo systemctl restart nginx
             
-            # 显示部署后的文件时间戳
-            echo "📁 Deployed files:"
+            # 显示最终结果
+            echo ""
+            echo "=" "=" "=" "=" "=" "=" "=" "=" "=" "="
+            echo "📊 部署完成! 最终状态:"
+            echo "=" "=" "=" "=" "=" "=" "=" "=" "=" "="
+            echo "� 文件信息:"
             ls -lh ${{ secrets.DEPLOY_PATH }}/index.html
-            
+            echo ""
+            echo "📅 文件修改时间: $(stat -c %y ${{ secrets.DEPLOY_PATH }}/index.html)"
+            echo "🌐 nginx状态: $(sudo systemctl is-active nginx)"
+            echo ""
             echo "✅ Deployment completed successfully!"
 
       # 9. 验证部署
