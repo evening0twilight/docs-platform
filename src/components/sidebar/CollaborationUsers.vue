@@ -50,7 +50,12 @@
             </div>
             <!-- 权限控制 - 仅owner可见 -->
             <div v-if="isOwner" class="user-actions">
-              <a-select v-model="user.permission" size="small" @change="handlePermissionChange(user)">
+              <a-select 
+                v-model:model-value="user.permission" 
+                size="small" 
+                :loading="permissionLoading.has(user.userId)"
+                @change="(value) => handlePermissionChange(user, value)"
+              >
                 <a-option value="editor">可编辑</a-option>
                 <a-option value="viewer">只读</a-option>
               </a-select>
@@ -153,6 +158,9 @@ const emit = defineEmits<{
 const isCollaborationEnabled = ref(props.collaborationEnabled)
 const toggleLoading = ref(false)
 
+// 权限修改loading状态
+const permissionLoading = ref<Set<string>>(new Set())
+
 // 监听props变化
 watch(() => props.collaborationEnabled, (newVal) => {
   isCollaborationEnabled.value = newVal
@@ -208,15 +216,16 @@ const handleCollaborationToggle = async (enabled: boolean) => {
 }
 
 // 处理权限变更
-const handlePermissionChange = async (user: UserInfo) => {
+const handlePermissionChange = async (user: UserInfo, newPermission: string) => {
   if (!props.documentId) {
     Message.error('无法获取文档ID')
     return
   }
   
+  // 添加loading状态
+  permissionLoading.value.add(user.userId)
+  
   try {
-    Message.info(`正在更新 ${user.username} 的权限...`)
-    
     // 首先获取权限列表,找到该用户的permissionId
     const permissions = await getDocumentPermissions(Number(props.documentId))
     const userPermission = permissions.find((p: any) => p.userId === Number(user.userId))
@@ -230,15 +239,20 @@ const handlePermissionChange = async (user: UserInfo) => {
     await updateDocumentPermission(
       Number(props.documentId),
       userPermission.id,
-      user.permission as 'editor' | 'viewer'
+      newPermission as 'editor' | 'viewer'
     )
     
-    Message.success(`已更新 ${user.username} 的权限为${user.permission === 'editor' ? '可编辑' : '只读'}`)
+    // 更新本地状态
+    user.permission = newPermission as 'editor' | 'viewer'
     
-    // TODO: 通过WebSocket通知被修改的用户
+    Message.success(`已更新 ${user.username} 的权限为${newPermission === 'editor' ? '可编辑' : '只读'}`)
+    
+    // TODO: 通过WebSocket通知被修改的用户 - 需要后端支持
   } catch (error) {
     console.error('更新权限失败:', error)
     Message.error('更新权限失败')
+  } finally {
+    permissionLoading.value.delete(user.userId)
   }
 }
 </script>
