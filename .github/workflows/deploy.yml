@@ -93,6 +93,14 @@ jobs:
             sudo chown -R www-data:www-data ${{ secrets.DEPLOY_PATH }}
             sudo chmod -R 755 ${{ secrets.DEPLOY_PATH }}
             
+            # 强制更新文件时间戳
+            sudo touch -r /tmp/deploy.tar.gz ${{ secrets.DEPLOY_PATH }}/*
+            
+            # 清除nginx缓存(如果存在)
+            if [ -d "/var/cache/nginx" ]; then
+              sudo rm -rf /var/cache/nginx/*
+            fi
+            
             # ⭐ 更新 Nginx 配置（新增）
             if [ -f "/tmp/nginx.conf" ]; then
               echo "Updating Nginx configuration..."
@@ -102,10 +110,14 @@ jobs:
               rm -f /tmp/nginx.conf
             fi
             
-            # 重启 Nginx
-            sudo systemctl reload nginx
+            # 重启 Nginx (使用restart而不是reload以确保清除所有缓存)
+            sudo systemctl restart nginx
             
-            echo "Deployment completed successfully!"
+            # 显示部署后的文件时间戳
+            echo "📁 Deployed files:"
+            ls -lh ${{ secrets.DEPLOY_PATH }}/index.html
+            
+            echo "✅ Deployment completed successfully!"
 
       # 9. 验证部署
       - name: Verify deployment
