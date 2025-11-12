@@ -69,60 +69,87 @@ jobs:
           key: ${{ secrets.SERVER_SSH_KEY }}
           port: 22
           script: |
+            set -e  # 遇到错误立即退出
+            
             echo "🔍 开始部署流程..."
             echo "📍 部署路径: ${{ secrets.DEPLOY_PATH }}"
             echo "📅 当前时间: $(date)"
             
-            # 检查部署路径
-            if [ ! -d "${{ secrets.DEPLOY_PATH }}" ]; then
-              echo "⚠️  部署路径不存在,将创建..."
-            else
-              echo "✅ 部署路径存在"
-              echo "📂 当前文件列表:"
-              ls -lh ${{ secrets.DEPLOY_PATH }}/index.html 2>/dev/null || echo "index.html 不存在"
+            # 检查部署路径变量
+            if [ -z "${{ secrets.DEPLOY_PATH }}" ]; then
+              echo "❌ 错误: DEPLOY_PATH 未设置!"
+              exit 1
             fi
-            
-            # 创建备份
-            if [ -d "${{ secrets.DEPLOY_PATH }}" ]; then
-              echo "💾 Creating backup..."
-              sudo rm -rf ${{ secrets.DEPLOY_PATH }}.backup
-              sudo cp -r ${{ secrets.DEPLOY_PATH }} ${{ secrets.DEPLOY_PATH }}.backup
-            fi
-            
-            # 创建部署目录
-            sudo mkdir -p ${{ secrets.DEPLOY_PATH }}
-            
-            # 清空当前部署目录
-            echo "🗑️  清空部署目录..."
-            sudo rm -rf ${{ secrets.DEPLOY_PATH }}/*
             
             # 检查压缩包
             if [ ! -f "/tmp/deploy.tar.gz" ]; then
               echo "❌ 错误: /tmp/deploy.tar.gz 不存在!"
+              echo "📂 /tmp 目录内容:"
+              ls -lh /tmp/ | grep deploy || echo "未找到deploy相关文件"
               exit 1
             fi
             echo "✅ 压缩包存在: $(ls -lh /tmp/deploy.tar.gz)"
             
+            # 检查部署路径
+            if [ ! -d "${{ secrets.DEPLOY_PATH }}" ]; then
+              echo "⚠️  部署路径不存在,将创建..."
+              sudo mkdir -p "${{ secrets.DEPLOY_PATH }}" || {
+                echo "❌ 创建部署目录失败!"
+                exit 1
+              }
+            else
+              echo "✅ 部署路径存在"
+              echo "📂 当前文件列表:"
+              ls -lh "${{ secrets.DEPLOY_PATH }}/index.html" 2>/dev/null || echo "index.html 不存在"
+            fi
+            
+            # 创建备份
+            if [ -d "${{ secrets.DEPLOY_PATH }}" ] && [ "$(ls -A ${{ secrets.DEPLOY_PATH }})" ]; then
+              echo "💾 Creating backup..."
+              sudo rm -rf "${{ secrets.DEPLOY_PATH }}.backup"
+              sudo cp -r "${{ secrets.DEPLOY_PATH }}" "${{ secrets.DEPLOY_PATH }}.backup" || echo "⚠️  备份失败,继续部署..."
+            fi
+            
+            # 清空当前部署目录
+            echo "🗑️  清空部署目录..."
+            sudo rm -rf "${{ secrets.DEPLOY_PATH }}"/*
+            
             # 解压新文件
-            echo "📦 解压文件到 ${{ secrets.DEPLOY_PATH }}..."
-            cd ${{ secrets.DEPLOY_PATH }}
-            sudo tar -xzf /tmp/deploy.tar.gz
+            echo "� 解压文件到 ${{ secrets.DEPLOY_PATH }}..."
+            cd "${{ secrets.DEPLOY_PATH }}"
+            sudo tar -xzf /tmp/deploy.tar.gz || {
+              echo "❌ 解压失败!"
+              # 尝试恢复备份
+              if [ -d "${{ secrets.DEPLOY_PATH }}.backup" ]; then
+                echo "🔄 恢复备份..."
+                sudo cp -r "${{ secrets.DEPLOY_PATH }}.backup"/* "${{ secrets.DEPLOY_PATH }}/"
+              fi
+              exit 1
+            }
             
             # 验证解压结果
+            if [ ! -f "${{ secrets.DEPLOY_PATH }}/index.html" ]; then
+              echo "❌ 错误: index.html 未找到!"
+              echo "📂 实际解压的文件:"
+              ls -la "${{ secrets.DEPLOY_PATH }}" | head -20
+              exit 1
+            fi
+            
+            echo "✅ 解压成功!"
             echo "📁 解压后的文件:"
-            ls -lh ${{ secrets.DEPLOY_PATH }}/index.html
+            ls -lh "${{ secrets.DEPLOY_PATH }}/index.html"
             
             # 清理临时文件
             rm -f /tmp/deploy.tar.gz
             
             # 设置权限
             echo "🔐 设置文件权限..."
-            sudo chown -R www-data:www-data ${{ secrets.DEPLOY_PATH }}
-            sudo chmod -R 755 ${{ secrets.DEPLOY_PATH }}
+            sudo chown -R www-data:www-data "${{ secrets.DEPLOY_PATH }}"
+            sudo chmod -R 755 "${{ secrets.DEPLOY_PATH }}"
             
             # 更新文件时间戳
             echo "⏰ 更新文件时间戳..."
-            sudo find ${{ secrets.DEPLOY_PATH }} -type f -exec touch {} \;
+            sudo find "${{ secrets.DEPLOY_PATH }}" -type f -exec touch {} \;
             
             # 清除nginx缓存
             echo "🧹 清除nginx缓存..."
