@@ -86,7 +86,15 @@ jobs:
             
             echo "🔍 开始部署流程..."
             echo "📍 部署路径: ${{ secrets.DEPLOY_PATH }}"
-            echo "📅 当前时间: $(date)"
+            echo "� 实际路径(展开): ${{ secrets.DEPLOY_PATH }}"
+            echo "�📅 当前时间: $(date)"
+            
+            # 检查DEPLOY_PATH是否匹配nginx配置
+            NGINX_ROOT=$(grep -E '^\s*root\s+' /etc/nginx/sites-available/onespecial.me | head -1 | awk '{print $2}' | tr -d ';')
+            echo "🔍 Nginx root路径: $NGINX_ROOT"
+            if [ "${{ secrets.DEPLOY_PATH }}" != "$NGINX_ROOT" ]; then
+              echo "⚠️ 警告: DEPLOY_PATH (${{ secrets.DEPLOY_PATH }}) 与 Nginx root ($NGINX_ROOT) 不匹配!"
+            fi
             
             # 检查部署路径变量
             if [ -z "${{ secrets.DEPLOY_PATH }}" ]; then
