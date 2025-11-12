@@ -170,6 +170,27 @@ jobs:
             sudo chown -R www-data:www-data "${{ secrets.DEPLOY_PATH }}"
             sudo chmod -R 755 "${{ secrets.DEPLOY_PATH }}"
             
+            # ⚠️ 验证文件实际大小(在touch之前)
+            echo "🔍 验证文件完整性..."
+            ACTUAL_SIZE=$(stat -c %s "${{ secrets.DEPLOY_PATH }}/index.html")
+            echo "实际文件大小: $ACTUAL_SIZE 字节"
+            if [ "$ACTUAL_SIZE" -lt 600 ]; then
+              echo "❌ 错误: 文件大小异常 ($ACTUAL_SIZE 字节)!"
+              echo "📂 查看文件内容前100字符:"
+              head -c 100 "${{ secrets.DEPLOY_PATH }}/index.html"
+              echo ""
+              echo "🔄 尝试重新解压..."
+              sudo rm -rf "${{ secrets.DEPLOY_PATH }}"/*
+              cd "${{ secrets.DEPLOY_PATH }}"
+              sudo tar -xzf /tmp/deploy.tar.gz
+              ACTUAL_SIZE=$(stat -c %s "${{ secrets.DEPLOY_PATH }}/index.html")
+              echo "重新解压后大小: $ACTUAL_SIZE 字节"
+              if [ "$ACTUAL_SIZE" -lt 600 ]; then
+                echo "❌ 重新解压仍然失败!"
+                exit 1
+              fi
+            fi
+            
             # 更新文件时间戳
             echo "⏰ 更新文件时间戳..."
             sudo find "${{ secrets.DEPLOY_PATH }}" -type f -exec touch {} \;
@@ -247,11 +268,9 @@ jobs:
             echo "- 符号链接状态: $(ls -l /etc/nginx/sites-enabled/onespecial.me 2>/dev/null || echo '符号链接不存在')"
             
             echo ""
-            echo "🔍 Nginx root路径诊断:"
-            echo "- 配置中的root: $(grep -E '^\s*root\s+' /etc/nginx/sites-available/onespecial.me | head -1)"
-            echo "- 实际文件大小: $(stat -c %s ${{ secrets.DEPLOY_PATH }}/index.html) 字节"
-            echo "- 尝试找到458字节的index.html:"
-            find /var/www -name "index.html" -size 458c 2>/dev/null || echo "未找到458字节的index.html"
+            echo "✅ 最终文件验证:"
+            echo "- index.html大小: $(stat -c %s ${{ secrets.DEPLOY_PATH }}/index.html) 字节"
+            echo "- 文件MD5: $(md5sum ${{ secrets.DEPLOY_PATH }}/index.html | cut -d' ' -f1)"
             echo ""
             echo "✅ Deployment completed successfully!"
 
