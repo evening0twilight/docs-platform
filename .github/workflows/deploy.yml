@@ -165,12 +165,19 @@ jobs:
               echo "📝 更新Nginx配置..."
               sudo cp /etc/nginx/sites-available/onespecial.me /etc/nginx/sites-available/onespecial.me.backup
               sudo cp /tmp/nginx.conf /etc/nginx/sites-available/onespecial.me
+              
+              echo "📋 检查配置文件更新:"
+              echo "ETag设置: $(grep -c 'etag off' /etc/nginx/sites-available/onespecial.me || echo '0')"
+              echo "if_modified_since设置: $(grep -c 'if_modified_since off' /etc/nginx/sites-available/onespecial.me || echo '0')"
+              
               sudo nginx -t && echo "✅ Nginx配置测试通过" || {
                 echo "❌ Nginx配置测试失败,恢复备份"
                 sudo cp /etc/nginx/sites-available/onespecial.me.backup /etc/nginx/sites-available/onespecial.me
                 exit 1
               }
               rm -f /tmp/nginx.conf
+            else
+              echo "⚠️ /tmp/nginx.conf 不存在,跳过配置更新"
             fi
             
             # 重启 Nginx (使用stop + start确保完全重启)
@@ -211,7 +218,12 @@ jobs:
             # 验证HTTP响应(忽略错误)
             echo ""
             echo "🔍 HTTP响应验证:"
-            curl -sI https://onespecial.me 2>/dev/null | grep -E "HTTP|Last-Modified|Content-Length" || echo "⚠️ curl验证失败,但部署已完成"
+            curl -sI https://onespecial.me 2>/dev/null | head -15 || echo "⚠️ curl验证失败,但部署已完成"
+            
+            echo ""
+            echo "📊 Nginx配置检查:"
+            echo "- sites-available配置: $(grep -c 'etag off' /etc/nginx/sites-available/onespecial.me 2>/dev/null || echo '未找到etag off')"
+            echo "- 符号链接状态: $(ls -l /etc/nginx/sites-enabled/onespecial.me 2>/dev/null || echo '符号链接不存在')"
             echo ""
             echo "✅ Deployment completed successfully!"
 
