@@ -222,6 +222,23 @@ class SocketService {
       }
     })
 
+    // 监听用户颜色更新
+    this.socket.on('user-color-updated', (data) => {
+      console.log('[Socket] 🎨 用户颜色更新:', data)
+      
+      // 更新在线用户列表中的颜色
+      const userIndex = this.onlineUsers.value.findIndex(u => u.userId === data.userId)
+      if (userIndex !== -1) {
+        this.onlineUsers.value[userIndex].color = data.color
+        console.log('[Socket] 已更新用户颜色:', this.onlineUsers.value[userIndex])
+      }
+      
+      // 如果是当前用户,也更新currentUser
+      if (this.currentUser.value?.userId === data.userId) {
+        this.currentUser.value.color = data.color
+      }
+    })
+
     // ====== 5. 连接错误和断开事件 ======
     this.socket.on('connect_error', (error) => {
       console.error('[Socket] ❌ 连接错误:', error.message)
@@ -457,6 +474,25 @@ class SocketService {
   sendChatMessage(msg: ChatMessage) {
     if (!this.socket?.connected) return
     this.socket.emit('chat-message', msg)
+  }
+
+  /**
+   * 更新光标颜色
+   */
+  updateCursorColor(color: string) {
+    if (!this.socket?.connected) return
+    this.socket.emit('update-cursor-color', { color })
+    
+    // 更新本地currentUser的颜色
+    if (this.currentUser.value) {
+      this.currentUser.value.color = color
+    }
+    
+    // 更新onlineUsers中当前用户的颜色
+    const userIndex = this.onlineUsers.value.findIndex(u => u.userId === this.currentUser.value?.userId)
+    if (userIndex !== -1) {
+      this.onlineUsers.value[userIndex].color = color
+    }
   }
 
   /**

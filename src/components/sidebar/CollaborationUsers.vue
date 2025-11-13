@@ -21,7 +21,13 @@
             <div class="user-name">{{ owner.username }}</div>
             <div class="user-role">所有者</div>
           </div>
-          <a-tag color="gold" size="small">👑</a-tag>
+          <!-- 光标颜色选择器 - 仅所有者本人可见 -->
+          <div v-if="owner.userId === currentUserId" class="color-picker-wrapper">
+            <input type="color" :value="owner.color || '#999'"
+              @input="(e) => handleColorChange((e.target as HTMLInputElement).value)" class="cursor-color-picker"
+              title="选择光标颜色" />
+          </div>
+          <a-tag v-else color="gold" size="small">👑</a-tag>
         </div>
       </div>
 
@@ -43,22 +49,33 @@
                 <span class="status-indicator"></span>
                 正在编辑
               </div>
-              <!-- 光标颜色指示器 -->
-              <div class="cursor-indicator" :style="{ backgroundColor: user.color || '#999' }"
-                :title="`光标颜色: ${user.color || '#999'}`">
-              </div>
             </div>
-            <!-- 权限控制 - 仅owner可见 -->
-            <div v-if="isOwner" class="user-actions">
-              <a-select 
-                v-model:model-value="user.permission" 
-                size="small" 
-                :loading="permissionLoading.has(user.userId)"
-                @change="(value) => handlePermissionChange(user, value)"
-              >
+
+            <!-- 光标颜色选择器 - 仅本人可见 -->
+            <div v-if="user.userId === currentUserId" class="color-picker-wrapper">
+              <input type="color" :value="user.color || '#999'"
+                @input="(e) => handleColorChange((e.target as HTMLInputElement).value)" class="cursor-color-picker"
+                title="选择光标颜色" />
+            </div>
+            <!-- 其他人只显示颜色指示器 -->
+            <div v-else class="cursor-indicator" :style="{ backgroundColor: user.color || '#999' }"
+              :title="`光标颜色: ${user.color || '#999'}`">
+            </div>
+
+            <!-- 权限控制 - 仅owner可见且非本人 -->
+            <div v-if="isOwner && user.userId !== currentUserId" class="user-actions">
+              <a-select v-model:model-value="user.permission" size="small" :loading="permissionLoading.has(user.userId)"
+                :disabled="permissionLoading.has(user.userId)" @change="(value) => handlePermissionChange(user, value)"
+                :style="{ minWidth: '90px' }">
                 <a-option value="editor">可编辑</a-option>
                 <a-option value="viewer">只读</a-option>
               </a-select>
+            </div>
+            <!-- 非owner显示权限标签 -->
+            <div v-else-if="!isOwner && user.userId !== currentUserId" class="user-permission-tag">
+              <a-tag :color="user.permission === 'editor' ? 'blue' : 'gray'" size="small">
+                {{ user.permission === 'editor' ? '可编辑' : '只读' }}
+              </a-tag>
             </div>
           </div>
         </div>
@@ -71,16 +88,12 @@
       <!-- 协作控制 -->
       <div class="section">
         <div class="section-title">协作设置</div>
-        
+
         <!-- 仅所有者可见协同开关 -->
         <div v-if="isOwner" class="collaboration-control">
           <div class="control-header">
             <span class="control-label">📡 协同编辑</span>
-            <a-switch 
-              v-model="isCollaborationEnabled" 
-              @change="handleCollaborationToggle"
-              :loading="toggleLoading"
-            />
+            <a-switch v-model="isCollaborationEnabled" @change="handleCollaborationToggle" :loading="toggleLoading" />
           </div>
           <div class="control-hint">
             <p v-if="isCollaborationEnabled" class="hint-text success">
@@ -91,13 +104,10 @@
             </p>
           </div>
         </div>
-        
+
         <!-- 非所有者显示协同状态 -->
         <div v-else class="collaboration-status">
-          <a-alert 
-            :type="isCollaborationEnabled ? 'success' : 'warning'" 
-            banner
-          >
+          <a-alert :type="isCollaborationEnabled ? 'success' : 'warning'" banner>
             <template v-if="isCollaborationEnabled">
               实时协同编辑已启用
             </template>
@@ -106,7 +116,7 @@
             </template>
           </a-alert>
         </div>
-        
+
         <!-- 协作信息 -->
         <div class="collaboration-info">
           <a-space direction="vertical" fill>
@@ -118,7 +128,7 @@
             </div>
             <div class="info-item">
               <span class="info-label">👥 在线人数</span>
-              <a-tag color="blue" size="small">{{ onlineCollaborators.length }} 人</a-tag>
+              <a-tag color="blue" size="small">{{ totalOnlineUsers }} 人</a-tag>
             </div>
           </a-space>
         </div>
@@ -152,6 +162,8 @@ const props = withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   'collaboration-toggled': [enabled: boolean]
+  'color-changed': [color: string]
+  'permission-changed': [userId: string, permission: string]
 }>()
 
 // 协同开关状态
@@ -182,6 +194,11 @@ const onlineCollaborators = computed(() => {
   return props.users.filter(u => u.userId !== props.ownerId)
 })
 
+// 计算总在线人数(包括所有者)
+const totalOnlineUsers = computed(() => {
+  return props.users.length
+})
+
 // 获取用户名首字母
 const getInitial = (name: string): string => {
   return name ? name.charAt(0).toUpperCase() : '?'
@@ -194,17 +211,17 @@ const handleCollaborationToggle = async (enabled: boolean) => {
     isCollaborationEnabled.value = !enabled // 恢复原状态
     return
   }
-  
+
   toggleLoading.value = true
   try {
     const result = await toggleCollaboration(Number(props.documentId), enabled)
-    
+
     if (enabled) {
       Message.success('协同编辑已开启')
     } else {
       Message.warning(`协同编辑已关闭,${result.affectedPermissions}位编辑者权限已降为只读`)
     }
-    
+
     emit('collaboration-toggled', enabled)
   } catch (error) {
     console.error('切换协同开关失败:', error)
@@ -215,39 +232,47 @@ const handleCollaborationToggle = async (enabled: boolean) => {
   }
 }
 
+// 处理光标颜色变更
+const handleColorChange = (newColor: string) => {
+  // 通过emit通知父组件更新颜色,父组件会通过socket发送给后端
+  emit('color-changed', newColor)
+  Message.success('光标颜色已更新')
+}
+
 // 处理权限变更
 const handlePermissionChange = async (user: UserInfo, newPermission: string) => {
   if (!props.documentId) {
     Message.error('无法获取文档ID')
     return
   }
-  
+
   // 添加loading状态
   permissionLoading.value.add(user.userId)
-  
+
   try {
     // 首先获取权限列表,找到该用户的permissionId
     const permissions = await getDocumentPermissions(Number(props.documentId))
     const userPermission = permissions.find((p: any) => p.userId === Number(user.userId))
-    
+
     if (!userPermission) {
       Message.error('未找到该用户的权限记录')
       return
     }
-    
+
     // 更新权限
     await updateDocumentPermission(
       Number(props.documentId),
       userPermission.id,
       newPermission as 'editor' | 'viewer'
     )
-    
+
     // 更新本地状态
     user.permission = newPermission as 'editor' | 'viewer'
-    
+
     Message.success(`已更新 ${user.username} 的权限为${newPermission === 'editor' ? '可编辑' : '只读'}`)
-    
-    // TODO: 通过WebSocket通知被修改的用户 - 需要后端支持
+
+    // 通过emit通知父组件,父组件会处理权限更新逻辑
+    emit('permission-changed', user.userId, newPermission)
   } catch (error) {
     console.error('更新权限失败:', error)
     Message.error('更新权限失败')
@@ -348,6 +373,8 @@ const handlePermissionChange = async (user: UserInfo, newPermission: string) => 
   background: var(--color-fill-2);
   border-radius: 8px;
   transition: all 0.2s;
+  min-height: 56px;
+  /* 确保最小高度,防止内容挤压 */
 }
 
 .user-item:hover {
@@ -385,6 +412,8 @@ const handlePermissionChange = async (user: UserInfo, newPermission: string) => 
 .user-info {
   flex: 1;
   min-width: 0;
+  overflow: hidden;
+  /* 防止文本溢出 */
 }
 
 .user-name {
@@ -423,11 +452,21 @@ const handlePermissionChange = async (user: UserInfo, newPermission: string) => 
   margin-top: 4px;
   border: 1px solid rgba(0, 0, 0, 0.1);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
 }
 
 .user-actions {
   flex-shrink: 0;
-  margin-left: 8px;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+}
+
+.user-permission-tag {
+  flex-shrink: 0;
+  margin-left: auto;
+  display: flex;
+  align-items: center;
 }
 
 .empty-state {
@@ -502,5 +541,33 @@ const handlePermissionChange = async (user: UserInfo, newPermission: string) => 
 .info-label {
   font-size: 13px;
   color: var(--color-text-2);
+}
+
+/* 光标颜色选择器样式 */
+.color-picker-wrapper {
+  margin-left: auto;
+}
+
+.cursor-color-picker {
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--color-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.cursor-color-picker:hover {
+  border-color: rgb(var(--primary-6));
+  transform: scale(1.1);
+}
+
+.cursor-color-picker::-webkit-color-swatch-wrapper {
+  padding: 0;
+}
+
+.cursor-color-picker::-webkit-color-swatch {
+  border: none;
+  border-radius: 4px;
 }
 </style>
