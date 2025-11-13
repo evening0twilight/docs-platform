@@ -1,8 +1,6 @@
 <template>
-  <div 
-    class="editorContainer w-full h-full flex overflow-hidden"
-    :class="{ 'comment-mode': currentMode === EditorMode.COMMENT }"
-  >
+  <div class="editorContainer w-full h-full flex overflow-hidden"
+    :class="{ 'comment-mode': currentMode === EditorMode.COMMENT }">
     <!-- 主编辑区域 -->
     <div class="editor-main flex-1 flex flex-col overflow-hidden">
       <!-- 空状态：没有选择文档时显示 -->
@@ -101,10 +99,10 @@
         <CollaborationUsers v-else-if="editorModeStore.currentMode === EditorMode.COLLABORATION"
           :users="collaboration?.onlineUsers.value || []" :is-connected="collaboration?.isConnected.value || false"
           :current-user-id="String(userStore.userInfo?.id || '')"
-          :owner-id="String(documentData?.creatorId || documentData?.userId || '')" 
-          :document-id="documentId"
+          :owner-id="String(documentData?.creatorId || documentData?.userId || '')" :document-id="documentId"
           :collaboration-enabled="documentData?.isCollaborationEnabled ?? false"
-          @collaboration-toggled="handleCollaborationToggled" />
+          @collaboration-toggled="handleCollaborationToggled" @color-changed="handleColorChanged"
+          @permission-changed="handlePermissionChanged" />
 
         <!-- 历史版本 -->
         <HistoryTimeline v-else-if="editorModeStore.currentMode === EditorMode.HISTORY" />
@@ -293,7 +291,7 @@ watch(() => socketService.currentUser.value, (user) => {
   if (user && user.color) {
     userColor.value = user.color
     console.log('[EditorArea] 用户颜色已更新:', user.color)
-    
+
     // 更新编辑器中的用户信息
     if (editor.value) {
       editor.value.commands.updateUser({
@@ -524,7 +522,7 @@ const fetchDocument = async () => {
     // 根据权限和协同开关状态设置编辑器是否可编辑
     const permission = (doc as any).permission
     const isCollaborationEnabled = (doc as any).isCollaborationEnabled
-    
+
     // 判断可编辑性:
     // 1. Owner总是可编辑
     // 2. 非Owner且协同未开启: 只读
@@ -539,7 +537,7 @@ const fetchDocument = async () => {
       // 协同已开启,根据permission判断
       isEditable = permission === 'editor'
     }
-    
+
     editor.value.setEditable(isEditable)
 
     // ⭐ 更新编辑器模式 store 的权限信息
@@ -733,16 +731,16 @@ const handleDisableCollaboration = () => {
 // 处理协同开关切换
 const handleCollaborationToggled = async (enabled: boolean) => {
   console.log('[EditorArea] 协同开关切换:', enabled)
-  
+
   // 重新加载文档信息以获取最新状态
   if (documentId.value) {
     try {
       const doc = await getDocument(documentId.value)
       documentData.value = doc
-      
+
       const permission = (doc as any).permission
       const isCollaborationEnabled = enabled
-      
+
       // 判断可编辑性(与fetchDocument中逻辑一致)
       let isEditable = false
       if (permission === 'owner') {
@@ -752,17 +750,63 @@ const handleCollaborationToggled = async (enabled: boolean) => {
       } else {
         isEditable = permission === 'editor'
       }
-      
+
       editor.value?.setEditable(isEditable)
-      
+
       // 更新store权限信息
       editorModeStore.permissions.canEdit = isEditable
-      
+
       // 提示用户
       if (!isEditable && permission === 'editor' && !isCollaborationEnabled) {
         Message.warning('协同编辑已关闭,您暂时只能查看')
       } else if (isEditable && permission === 'editor' && isCollaborationEnabled) {
         Message.success('协同编辑已开启,您可以编辑文档')
+      }
+    } catch (error) {
+      console.error('[EditorArea] 重新加载文档失败:', error)
+    }
+  }
+}
+
+// 处理光标颜色变更
+const handleColorChanged = (newColor: string) => {
+  console.log('[EditorArea] 光标颜色变更:', newColor)
+  // 直接使用socketService更新光标颜色
+  socketService.updateCursorColor(newColor)
+}
+
+// 处理权限变更
+const handlePermissionChanged = async (userId: string, permission: string) => {
+  console.log('[EditorArea] 权限变更:', userId, permission)
+
+  // 重新加载文档信息
+  if (documentId.value) {
+    try {
+      const doc = await getDocument(documentId.value)
+      documentData.value = doc
+
+      // 如果是当前用户的权限被修改,需要更新编辑器状态
+      if (String(userStore.userInfo?.id) === userId) {
+        const isCollaborationEnabled = doc.isCollaborationEnabled ?? false
+        const userPermission = (doc as any).permission
+
+        let isEditable = false
+        if (userPermission === 'owner') {
+          isEditable = true
+        } else if (!isCollaborationEnabled) {
+          isEditable = false
+        } else {
+          isEditable = permission === 'editor'
+        }
+
+        editor.value?.setEditable(isEditable)
+        editorModeStore.permissions.canEdit = isEditable
+
+        if (isEditable) {
+          Message.success('您的权限已更新为可编辑')
+        } else {
+          Message.warning('您的权限已更新为只读')
+        }
       }
     } catch (error) {
       console.error('[EditorArea] 重新加载文档失败:', error)
@@ -820,14 +864,47 @@ onMounted(() => {
 
   // 添加事件监听器
   window.addEventListener('manual-save-request', handleGlobalSave)
-  
+
   // 监听协同状态变化
   socketService.onCollaborationToggle((data) => {
     console.log('[EditorArea] 收到协同状态变化通知:', data)
-    
+
     // 如果是当前文档
     if (String(data.documentId) === String(documentId.value)) {
       handleCollaborationToggled(data.enabled)
+    }
+  })
+
+  // ⭐ 监听权限更新
+  socketService.onPermissionUpdate((data) => {
+    console.log('[EditorArea] 收到权限更新通知:', data)
+
+    // 如果是当前用户且是当前文档
+    if (String(data.userId) === String(userStore.userInfo?.id) &&
+      String(data.documentId) === String(documentId.value)) {
+
+      // 立即更新编辑器状态
+      const newPermission = data.role
+      const isCollaborationEnabled = documentData.value?.isCollaborationEnabled ?? false
+
+      let isEditable = false
+      if (newPermission === 'owner') {
+        isEditable = true
+      } else if (!isCollaborationEnabled) {
+        isEditable = false
+      } else {
+        isEditable = newPermission === 'editor'
+      }
+
+      editor.value?.setEditable(isEditable)
+      editorModeStore.permissions.canEdit = isEditable
+
+      // 提示用户
+      if (isEditable) {
+        Message.success('您的权限已更新为可编辑')
+      } else {
+        Message.warning('您的权限已更新为只读')
+      }
     }
   })
 
@@ -865,17 +942,22 @@ onBeforeUnmount(() => {
   padding-right: 12px;
   position: relative;
   z-index: 10;
-  overflow-x: auto; /* 添加滚动 */
+  overflow-x: auto;
+  /* 添加滚动 */
 }
 
 /* 左侧工具区域 - 保持原有大小,可横向滚动 */
 .toolbar-tools {
-  flex: 0 0 auto; /* 不伸缩 */
+  flex: 0 0 auto;
+  /* 不伸缩 */
   display: flex;
   align-items: center;
-  white-space: nowrap; /* 防止换行 */
-  overflow: visible; /* 允许内容显示 */
-  min-width: min-content; /* 至少容纳内容 */
+  white-space: nowrap;
+  /* 防止换行 */
+  overflow: visible;
+  /* 允许内容显示 */
+  min-width: min-content;
+  /* 至少容纳内容 */
 }
 
 /* 中间模式切换区域 */
