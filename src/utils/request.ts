@@ -2,6 +2,14 @@ import axios from 'axios'
 import type { AxiosInstance, InternalAxiosRequestConfig, AxiosResponse, AxiosError } from 'axios'
 import { Message } from '@arco-design/web-vue'
 import router from '@/router'
+import { useUserStore } from '@/store/user'
+
+// 标记是否正在刷新token
+let isRefreshing = false
+// 存储等待刷新token的请求队列
+let requestQueue: Array<(token: string) => void> = []
+// 标记是否正在登出(防止重复处理)
+let isLoggingOut = false
 
 // 创建axios实例
 const request: AxiosInstance = axios.create({
@@ -125,30 +133,170 @@ request.interceptors.response.use(
     
     console.error('响应错误:', error)
     
-    const { response, message } = error
+    const { response, message, config } = error
     
     if (response) {
       // 服务器返回了错误状态码
       const { status, data } = response
       
-      // 提取后端返回的错误信息
-      const backendMessage = (data as any)?.message || ''
+      // 提取后端返回的错误信息(处理嵌套的message结构)
+      let backendMessage = ''
+      if (typeof (data as any)?.message === 'string') {
+        backendMessage = (data as any).message
+      } else if (typeof (data as any)?.message?.message === 'string') {
+        backendMessage = (data as any).message.message
+      }
       
-      switch (status) {
-        case 400:
-          Message.error(backendMessage || '请求参数错误')
-          break
-        case 401:
-          Message.error(backendMessage || '登录已过期，请重新登录')
-          // 清除token并跳转到登录页
-          localStorage.removeItem('token')
-          sessionStorage.removeItem('token')
-          // 跳转到登录页
+      console.log('后端错误消息:', backendMessage)
+      
+      // 特殊处理401: 尝试刷新token
+      if (status === 401) {
+        // ⭐ 如果正在登出,直接拒绝所有请求
+        if (isLoggingOut) {
+          return Promise.reject(error)
+        }
+        
+        // ⭐ 先判断是否是被挤下去的情况(单点登录)
+        if (backendMessage.includes('账号已在其他地方登录')) {
+          if (!isLoggingOut) {
+            isLoggingOut = true
+            console.log("检测到账号被挤下去,执行登出");
+            Message.error(backendMessage)
+            
+            // 先清除Pinia store状态
+            const userStore = useUserStore()
+            userStore.logout()
+            
+            // 再跳转到登录页
+            router.push('/login').finally(() => {
+              isLoggingOut = false
+            })
+          }
+          return Promise.reject(error)
+        }
+        
+        // 获取refresh_token
+        const refreshToken = localStorage.getItem('refresh_token') || sessionStorage.getItem('refresh_token')
+        
+        if (!refreshToken) {
+          if (!isLoggingOut) {
+            isLoggingOut = true
+            console.log("没有refresh_token,执行登出");
+            
+            // 没有refresh_token,直接登出
+            Message.error('登录已过期,请重新登录')
+            
+            // 先清除Pinia store状态
+            const userStore = useUserStore()
+            userStore.logout()
+            
+            router.push('/login').finally(() => {
+              isLoggingOut = false
+            })
+          }
+          return Promise.reject(error)
+        }
+        
+        // 如果是刷新token的请求本身失败了,直接登出
+        if (config?.url?.includes('/users/refresh')) {
+          console.log("显示被挤下去路");
+          
+          Message.error(backendMessage.includes('账号已在其他地方登录') 
+            ? backendMessage  // 直接使用后端返回的完整消息
+            : '登录已过期,请重新登录')
+          localStorage.clear()
+          sessionStorage.clear()
           setTimeout(() => {
             if (router.currentRoute.value.path !== '/login') {
               router.push('/login')
             }
           }, 1000)
+          return Promise.reject(error)
+        }
+        
+        // 如果正在刷新token,将请求加入队列
+        if (isRefreshing) {
+          console.log("重新获取token路");
+          
+          return new Promise((resolve) => {
+            requestQueue.push((token: string) => {
+              if (config && config.headers) {
+                config.headers.Authorization = `Bearer ${token}`
+              }
+              resolve(request(config!))
+            })
+          })
+        }
+        
+        // 标记正在刷新
+        isRefreshing = true
+        
+        // 尝试刷新token
+        return axios.post(
+          `${import.meta.env.VITE_API_BASE_URL}/users/refresh`,
+          { refresh_token: refreshToken }
+        )
+          .then((res) => {
+            const { access_token, refresh_token: newRefreshToken } = res.data
+            
+            // 更新token
+            const storage = localStorage.getItem('token') ? localStorage : sessionStorage
+            storage.setItem('token', access_token)
+            storage.setItem('refresh_token', newRefreshToken)
+            
+            // 更新当前请求的token
+            if (config && config.headers) {
+              config.headers.Authorization = `Bearer ${access_token}`
+            }
+            
+            // 执行队列中的请求
+            requestQueue.forEach(cb => cb(access_token))
+            requestQueue = []
+            
+            // 重试原请求
+            return request(config!)
+          })
+          .catch((refreshError) => {
+            // 刷新token失败,完全登出
+            console.error('刷新token失败:', refreshError)
+            
+            if (!isLoggingOut) {
+              isLoggingOut = true
+              
+              // 提取刷新失败的错误消息
+              let errorMsg = ''
+              const errData = refreshError.response?.data
+              if (typeof errData?.message === 'string') {
+                errorMsg = errData.message
+              } else if (typeof errData?.message?.message === 'string') {
+                errorMsg = errData.message.message
+              }
+              
+              Message.error(errorMsg.includes('账号已在其他地方登录') 
+                ? errorMsg  // 直接使用后端返回的完整消息
+                : '登录已过期,请重新登录')
+              
+              // 先清除Pinia store状态
+              const userStore = useUserStore()
+              userStore.logout()
+              requestQueue = []
+              
+              router.push('/login').finally(() => {
+                isLoggingOut = false
+              })
+            }
+            
+            return Promise.reject(refreshError)
+          })
+          .finally(() => {
+            isRefreshing = false
+          })
+      }
+      
+      // 其他状态码处理
+      switch (status) {
+        case 400:
+          Message.error(backendMessage || '请求参数错误')
           break
         case 403:
           Message.error(backendMessage || '权限不足')
