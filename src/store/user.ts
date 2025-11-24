@@ -191,9 +191,9 @@ export const useUserStore = defineStore('user', {
     
     // 初始化 WebSocket 连接
     initWebSocket() {
-      const SOCKET_URL = import.meta.env.VITE_SOCKET_URL
+      const SOCKET_URL = import.meta.env.VITE_WS_URL
       if (!SOCKET_URL) {
-        console.warn('[UserStore] 未配置 VITE_SOCKET_URL')
+        console.warn('[UserStore] 未配置 VITE_WS_URL')
         return
       }
       
