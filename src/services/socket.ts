@@ -252,7 +252,7 @@ class SocketService {
     this.socket.on('connect_error', (error) => {
       console.error('[Socket] ❌ 连接错误:', error.message)
       console.error('[Socket] ❌ 错误详情:', error)
-      console.error('[Socket] ❌ 连接URL:', this.socket?.io?.uri)
+      console.error('[Socket] ❌ 连接URL:', import.meta.env.VITE_WS_URL)
       this.isConnected.value = false
       
       // 检查是否是认证错误
