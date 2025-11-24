@@ -18,10 +18,12 @@ export interface UseCollaborationOptions {
   onUserTyping?: (typing: any) => void
   // 接收聊天消息的回调
   onChatMessage?: (msg: any) => void
+  // 接收用户离开的回调
+  onUserLeft?: (data: any) => void
 }
 
 export function useCollaboration(options: UseCollaborationOptions) {
-  const { documentId, onRemoteEdit, onRemoteCursor, onRemoteSelection, onUserTyping, onChatMessage } = options
+  const { documentId, onRemoteEdit, onRemoteCursor, onRemoteSelection, onUserTyping, onChatMessage, onUserLeft } = options
 
   // 存储取消订阅的函数
   const unsubscribers: (() => void)[] = []
@@ -164,6 +166,15 @@ export function useCollaboration(options: UseCollaborationOptions) {
     if (onChatMessage) {
       const unsub = socketService.onChatMessage((data) => {
         onChatMessage(data)
+      })
+      unsubscribers.push(unsub)
+    }
+
+    // 监听用户离开
+    if (onUserLeft) {
+      const unsub = socketService.on('user-left', (data) => {
+        console.log('[Collaboration] 用户离开:', data)
+        onUserLeft(data)
       })
       unsubscribers.push(unsub)
     }
