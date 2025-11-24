@@ -1,0 +1,42 @@
+/* 远程光标样式 */
+.collaboration-cursor {
+  display: inline;
+  position: relative;
+  border-left: 2px solid;
+  height: 1.2em;
+  margin-left: -1px;
+  margin-right: 0;
+  pointer-events: none;
+  z-index: 10;
+  animation: blink 1s infinite;
+  vertical-align: baseline;
+}
+
+/* 光标闪烁动画 */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
+}
+
+/* 用户名矩形标签 - 位于光标右上角 */
+.collaboration-cursor-label {
+  position: absolute;
+  top: -20px;  /* 光标上方 */
+  left: 3px;   /* 光标右侧 */
+  padding: 2px 5px;
+  border-radius: 2px;
+  color: white;  /* 白色文字 */
+  font-size: 10px;
+  font-weight: 500;
+  white-space: nowrap;
+  pointer-events: none;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  line-height: 1.2;
+}
+
+/* 选区高亮 */
+.collaboration-selection {
+  background-color: currentColor;
+  opacity: 0.3;
+  border-radius: 2px;
+}

@@ -75,7 +75,8 @@ class SocketService {
       return
     }
 
-    console.log('[Socket] 正在连接到:', url)
+    console.log('[Socket] 🔌 正在连接到:', url)
+    console.log('[Socket] 🎫 Token:', token ? '存在' : '不存在')
 
     // 创建 socket 连接
     this.socket = io(url, {
@@ -87,6 +88,7 @@ class SocketService {
       timeout: 10000,
     })
 
+    console.log('[Socket] 📡 Socket实例已创建')
     this.setupEventListeners()
   }
 
@@ -169,15 +171,22 @@ class SocketService {
 
     // ====== 4. 文档房间事件 ======
     this.socket.on('joined-document', (data) => {
-      console.log('[Socket] ✅ 加入文档房间成功:', data)
-      console.log('[Socket] 当前在线用户:', data.users)
+      console.log('[Socket] ✅ 加入文档房间成功 - 原始数据:', JSON.stringify(data, null, 2))
+      
+      // ⭐ 兼容两种返回格式: { users: [...] } 或 { data: { users: [...] } }
+      const users = data.data?.users || data.users
+      console.log('[Socket] 解析后的在线用户:', users)
+      console.log('[Socket] users类型:', typeof users, '是否数组:', Array.isArray(users))
       
       // ⭐ 关键: 设置初始在线用户列表
-      if (data.users && Array.isArray(data.users)) {
-        this.onlineUsers.value = data.users
-        console.log('[Socket] 📋 在线用户列表已更新，共', data.users.length, '人')
+      if (users && Array.isArray(users)) {
+        this.onlineUsers.value = users
+        console.log('[Socket] 📋 在线用户列表已更新，共', users.length, '人')
+        console.log('[Socket] 📋 详细用户列表:', users.map(u => `${u.username}(${u.userId})`).join(', '))
       } else {
         console.warn('[Socket] ⚠️ joined-document 事件未返回 users 数组')
+        console.log('[Socket] ⚠️ data.data:', data.data)
+        console.log('[Socket] ⚠️ data.users:', data.users)
         this.onlineUsers.value = []
       }
     })
@@ -242,6 +251,8 @@ class SocketService {
     // ====== 5. 连接错误和断开事件 ======
     this.socket.on('connect_error', (error) => {
       console.error('[Socket] ❌ 连接错误:', error.message)
+      console.error('[Socket] ❌ 错误详情:', error)
+      console.error('[Socket] ❌ 连接URL:', this.socket?.io?.uri)
       this.isConnected.value = false
       
       // 检查是否是认证错误
@@ -252,6 +263,7 @@ class SocketService {
 
     this.socket.on('disconnect', (reason) => {
       console.log('[Socket] ❌ 连接断开:', reason)
+      console.log('[Socket] ❌ 断开原因详情:', reason)
       this.isConnected.value = false
       this.isAuthenticated.value = false
       this.onlineUsers.value = []
@@ -424,7 +436,11 @@ class SocketService {
    * 发送光标位置
    */
   sendCursorPosition(cursor: CursorPosition) {
-    if (!this.socket?.connected) return
+    if (!this.socket?.connected) {
+      console.warn('[Socket] ⚠️ 未连接,无法发送光标位置')
+      return
+    }
+    console.log('[Socket] 📤 发送光标位置:', cursor)
     this.socket.emit('cursor-position', cursor)
   }
 
@@ -432,8 +448,12 @@ class SocketService {
    * 监听光标位置
    */
   onCursorPosition(callback: (data: any) => void): (() => void) {
-    this.socket?.on('cursor-position', callback)
-    return () => this.socket?.off('cursor-position', callback)
+    const wrappedCallback = (data: any) => {
+      console.log('[Socket] 📥 接收到远程光标:', data)
+      callback(data)
+    }
+    this.socket?.on('cursor-position', wrappedCallback)
+    return () => this.socket?.off('cursor-position', wrappedCallback)
   }
 
   /**
@@ -479,21 +499,21 @@ class SocketService {
   /**
    * 更新光标颜色
    */
-  updateCursorColor(color: string) {
-    if (!this.socket?.connected) return
-    this.socket.emit('update-cursor-color', { color })
+  // updateCursorColor(color: string) {
+  //   if (!this.socket?.connected) return
+  //   this.socket.emit('update-cursor-color', { color })
     
-    // 更新本地currentUser的颜色
-    if (this.currentUser.value) {
-      this.currentUser.value.color = color
-    }
+  //   // 更新本地currentUser的颜色
+  //   if (this.currentUser.value) {
+  //     this.currentUser.value.color = color
+  //   }
     
-    // 更新onlineUsers中当前用户的颜色
-    const userIndex = this.onlineUsers.value.findIndex(u => u.userId === this.currentUser.value?.userId)
-    if (userIndex !== -1) {
-      this.onlineUsers.value[userIndex].color = color
-    }
-  }
+  //   // 更新onlineUsers中当前用户的颜色
+  //   const userIndex = this.onlineUsers.value.findIndex(u => u.userId === this.currentUser.value?.userId)
+  //   if (userIndex !== -1) {
+  //     this.onlineUsers.value[userIndex].color = color
+  //   }
+  // }
 
   /**
    * 监听聊天消息
