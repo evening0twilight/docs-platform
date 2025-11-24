@@ -242,9 +242,21 @@ const applyRemoteEdit = (edit: any) => {
         // 精确位置插入
         if (typeof from === 'number' && content) {
           console.log(`[EditorArea] 📝 执行插入: 位置${from}, 内容:`, content)
-          // content 可能是 JSON 格式或 HTML 字符串
-          const insertContent = typeof content === 'string' ? content : content
-          editor.value.commands.insertContentAt(from, insertContent)
+          
+          // ⭐ 关键修复：使用ProseMirror的原生API插入内容
+          const view = editor.value.view
+          const state = view.state
+          const tr = state.tr
+          
+          // 将JSON内容转换为ProseMirror Fragment
+          const schema = state.schema
+          const contentNode = schema.nodeFromJSON(content)
+          const slice = contentNode.content // 获取内容的Fragment
+          
+          // 直接插入slice，不会重复包装
+          tr.replaceWith(from, from, slice)
+          view.dispatch(tr)
+          
           console.log('[EditorArea] ✅ 插入完成')
         } else {
           console.warn('[Editor] insert 操作缺少必要参数:', edit)
@@ -266,12 +278,21 @@ const applyRemoteEdit = (edit: any) => {
         // 替换指定范围的内容
         if (typeof from === 'number' && typeof to === 'number' && content) {
           console.log(`[EditorArea] 🔄 执行替换: ${from} -> ${to}, 内容:`, content)
-          const replaceContent = typeof content === 'string' ? content : content
-          editor.value
-            .chain()
-            .deleteRange({ from, to })
-            .insertContentAt(from, replaceContent)
-            .run()
+          
+          // ⭐ 关键修复：使用ProseMirror的原生API替换内容
+          const view = editor.value.view
+          const state = view.state
+          const tr = state.tr
+          
+          // 将JSON内容转换为ProseMirror Fragment
+          const schema = state.schema
+          const contentNode = schema.nodeFromJSON(content)
+          const slice = contentNode.content
+          
+          // 直接替换range，不会重复包装
+          tr.replaceWith(from, to, slice)
+          view.dispatch(tr)
+          
           console.log('[EditorArea] ✅ 替换完成')
         } else if (content) {
           // 如果没有范围，完全替换（兼容旧版）
