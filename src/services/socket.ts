@@ -24,6 +24,8 @@ export interface DocumentEdit {
   position?: { line: number; column: number }  // 兼容旧版
   from?: number  // 编辑起始位置
   to?: number    // 编辑结束位置
+  openStart?: number  // ProseMirror Slice的openStart
+  openEnd?: number    // ProseMirror Slice的openEnd
   timestamp?: number
 }
 
