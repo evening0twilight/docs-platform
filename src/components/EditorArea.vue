@@ -132,6 +132,7 @@ import TaskItem from '@tiptap/extension-task-item'
 import Image from '@tiptap/extension-image'
 import { CollaborationCursor } from '@/extensions/CollaborationCursor'
 import { CommentMark } from '@/extensions/CommentMark'
+import { Slice, Fragment } from '@tiptap/pm/model'  //   导入ProseMirror类型
 import ToolList from './editor/ToolList.vue';
 import ModeSwitcher from './editor/ModeSwitcher.vue';
 import EmptyState from './EmptyState.vue';
@@ -142,9 +143,9 @@ import CommentList from './sidebar/CommentList.vue';
 import CollaborationUsers from './sidebar/CollaborationUsers.vue';
 import HistoryTimeline from './sidebar/HistoryTimeline.vue';
 import { useCollaboration } from '@/composables/useCollaboration'
-import { socketService } from '@/services/socket'  // ⭐ 导入 socketService
+import { socketService } from '@/services/socket'  //   导入 socketService
 import { Message } from '@arco-design/web-vue'
-import '@/styles/collaboration.scss' // ⭐ 导入协同光标样式
+import '@/styles/collaboration.scss' //   导入协同光标样式
 
 // 定义props（支持路由参数）
 const props = defineProps<{
@@ -222,12 +223,32 @@ const {
 // 标记：是否正在应用远程编辑（防止死循环）
 const isApplyingRemoteEdit = ref(false)
 
-// 应用远程编辑到编辑器
-const applyRemoteEdit = (edit: any) => {
+// 编辑队列：处理连续快速到达的编辑操作
+const editQueue: any[] = []
+let isProcessingQueue = false
+
+// 处理编辑队列
+const processEditQueue = async () => {
+  if (isProcessingQueue || editQueue.length === 0) return
+
+  isProcessingQueue = true
+
+  while (editQueue.length > 0) {
+    const edit = editQueue.shift()
+    await applyRemoteEditImmediate(edit)
+    // 短暂延迟，让编辑器渲染完成
+    await new Promise(resolve => setTimeout(resolve, 10))
+  }
+
+  isProcessingQueue = false
+}
+
+// 应用远程编辑到编辑器（立即执行版本）
+const applyRemoteEditImmediate = (edit: any) => {
   console.log('[EditorArea] 📝 准备应用远程编辑:', edit)
-  
-  if (!editor.value || isApplyingRemoteEdit.value) {
-    console.warn('[EditorArea] ⚠️ editor未初始化或正在应用远程编辑')
+
+  if (!editor.value) {
+    console.warn('[EditorArea] ⚠️ editor未初始化')
     return
   }
 
@@ -235,28 +256,40 @@ const applyRemoteEdit = (edit: any) => {
     isApplyingRemoteEdit.value = true // 标记为远程更新
     console.log('[EditorArea] 🔒 已设置isApplyingRemoteEdit标志')
 
-    const { type, content, from, to } = edit
+    const { type, content, from, to, openStart, openEnd } = edit
 
     switch (type) {
       case 'insert':
         // 精确位置插入
         if (typeof from === 'number' && content) {
-          console.log(`[EditorArea] 📝 执行插入: 位置${from}, 内容:`, content)
-          
-          // ⭐ 关键修复：使用ProseMirror的原生API插入内容
+          console.log(`[EditorArea] 📝 执行插入: 位置${from}, 内容:`, content, `openStart=${openStart}, openEnd=${openEnd}`)
+
+          //   关键修复：使用ProseMirror的Slice正确插入
           const view = editor.value.view
           const state = view.state
           const tr = state.tr
-          
-          // 将JSON内容转换为ProseMirror Fragment
           const schema = state.schema
-          const contentNode = schema.nodeFromJSON(content)
-          const slice = contentNode.content // 获取内容的Fragment
-          
-          // 直接插入slice，不会重复包装
-          tr.replaceWith(from, from, slice)
+
+          //   处理数组或单个节点
+          let nodes: any[]
+          if (Array.isArray(content)) {
+            nodes = content.map((nodeJSON: any) => schema.nodeFromJSON(nodeJSON))
+            console.log(`[EditorArea] 📝 解析${nodes.length}个节点:`, nodes)
+          } else {
+            nodes = [schema.nodeFromJSON(content)]
+            console.log(`[EditorArea] 📝 解析1个节点:`, nodes)
+          }
+
+          //   创建Fragment和Slice
+          const fragment = Fragment.from(nodes)
+          const slice = new Slice(fragment, openStart || 0, openEnd || 0)
+
+          console.log(`[EditorArea] 📝 创建Slice: size=${slice.size}, openStart=${slice.openStart}, openEnd=${slice.openEnd}`)
+
+          // 使用replace插入slice
+          tr.replace(from, from, slice)
           view.dispatch(tr)
-          
+
           console.log('[EditorArea] ✅ 插入完成')
         } else {
           console.warn('[Editor] insert 操作缺少必要参数:', edit)
@@ -278,21 +311,27 @@ const applyRemoteEdit = (edit: any) => {
         // 替换指定范围的内容
         if (typeof from === 'number' && typeof to === 'number' && content) {
           console.log(`[EditorArea] 🔄 执行替换: ${from} -> ${to}, 内容:`, content)
-          
-          // ⭐ 关键修复：使用ProseMirror的原生API替换内容
+
+          //   关键修复：使用ProseMirror的原生API替换内容
           const view = editor.value.view
           const state = view.state
           const tr = state.tr
-          
-          // 将JSON内容转换为ProseMirror Fragment
           const schema = state.schema
-          const contentNode = schema.nodeFromJSON(content)
-          const slice = contentNode.content
-          
-          // 直接替换range，不会重复包装
-          tr.replaceWith(from, to, slice)
+
+          //   处理数组或单个节点
+          let nodes: any[]
+          if (Array.isArray(content)) {
+            nodes = content.map((nodeJSON: any) => schema.nodeFromJSON(nodeJSON))
+            console.log(`[EditorArea] 🔄 解析${nodes.length}个节点:`, nodes)
+          } else {
+            nodes = [schema.nodeFromJSON(content)]
+            console.log(`[EditorArea] 🔄 解析1个节点:`, nodes)
+          }
+
+          // 使用replaceWith替换range
+          tr.replaceWith(from, to, nodes)
           view.dispatch(tr)
-          
+
           console.log('[EditorArea] ✅ 替换完成')
         } else if (content) {
           // 如果没有范围，完全替换（兼容旧版）
@@ -304,24 +343,28 @@ const applyRemoteEdit = (edit: any) => {
       default:
         console.warn('[Editor] 未知的编辑类型:', type)
     }
-    
+
     console.log('[EditorArea] 📄 应用后文档内容长度:', editor.value.state.doc.content.size)
   } catch (error) {
     console.error('[Editor] 应用远程编辑失败:', error, edit)
   } finally {
-    // 延迟解除标记，确保事件处理完成
-    setTimeout(() => {
-      isApplyingRemoteEdit.value = false
-      console.log('[EditorArea] 🔓 已解除isApplyingRemoteEdit标志')
-    }, 50)
+    isApplyingRemoteEdit.value = false
+    console.log('[EditorArea] 🔓 已解除isApplyingRemoteEdit标志')
   }
 }
 
-// ⭐ 更新远程光标
+// 应用远程编辑（队列版本）
+const applyRemoteEdit = (edit: any) => {
+  console.log('[EditorArea] 📥 加入编辑队列:', edit)
+  editQueue.push(edit)
+  processEditQueue()
+}
+
+//   更新远程光标
 const updateRemoteCursor = (data: any) => {
   console.log('[EditorArea] 📍 收到远程光标更新:', data)
   console.log('[EditorArea] 📍 position详情: line=', data.position?.line, 'column=', data.position?.column)
-  
+
   if (!editor.value) {
     console.warn('[EditorArea] ⚠️ editor未初始化,无法更新光标')
     return
@@ -330,8 +373,8 @@ const updateRemoteCursor = (data: any) => {
   try {
     console.log('[EditorArea] 📍 通过transaction meta更新光标')
     console.log('[EditorArea] 📍 传递给Plugin的position:', JSON.stringify(data.position))
-    
-    // ⭐ 创建transaction并设置meta来传递光标数据
+
+    //   创建transaction并设置meta来传递光标数据
     const tr = editor.value.state.tr
     tr.setMeta('updateRemoteCursor', {
       action: 'set',
@@ -340,7 +383,7 @@ const updateRemoteCursor = (data: any) => {
       color: data.color,
       position: data.position,
     })
-    
+
     editor.value.view.dispatch(tr)
     console.log('[EditorArea] ✅ 已派发光标更新transaction')
   } catch (error) {
@@ -348,10 +391,10 @@ const updateRemoteCursor = (data: any) => {
   }
 }
 
-// ⭐ 移除远程光标
+//   移除远程光标
 const removeRemoteCursor = (userId: string) => {
   console.log('[EditorArea] 📍 移除远程光标:', userId)
-  
+
   if (!editor.value) return
 
   try {
@@ -360,7 +403,7 @@ const removeRemoteCursor = (userId: string) => {
       action: 'delete',
       userId: userId,
     })
-    
+
     editor.value.view.dispatch(tr)
     console.log('[EditorArea] ✅ 已派发光标删除transaction')
   } catch (error) {
@@ -368,7 +411,7 @@ const removeRemoteCursor = (userId: string) => {
   }
 }
 
-// ⭐ 在有 documentId 时初始化协作功能
+//   在有 documentId 时初始化协作功能
 let collaboration: ReturnType<typeof useCollaboration> | null = null
 let onlineUsers = ref([])
 let isConnected = ref(false)
@@ -381,7 +424,7 @@ watch(() => socketService.currentUser.value, (user) => {
   }
 })
 
-// ⭐ 监听 documentId 变化，动态加入/离开文档房间
+//   监听 documentId 变化，动态加入/离开文档房间
 watch(documentId, (newId, oldId) => {
   console.log('[EditorArea] documentId 变化:', { oldId, newId })
 
@@ -406,7 +449,7 @@ watch(documentId, (newId, oldId) => {
           applyRemoteEdit(edit)
         },
 
-        // ⭐ 接收远程光标
+        //   接收远程光标
         onRemoteCursor: (data) => {
           console.log('[Editor] 远程光标:', data)
           updateRemoteCursor(data)
@@ -424,7 +467,7 @@ watch(documentId, (newId, oldId) => {
           }
         },
 
-        // ⭐ 接收用户离开
+        //   接收用户离开
         onUserLeft: (data) => {
           console.log('[Editor] 用户离开:', data)
           removeRemoteCursor(data.userId)
@@ -438,7 +481,7 @@ watch(documentId, (newId, oldId) => {
       socketService.joinDocument(newId)
     }
   }
-}, { immediate: true })  // ⭐ immediate: true 确保首次加载时就执行
+}, { immediate: true })  //   immediate: true 确保首次加载时就执行
 
 // 广播编辑操作（使用 TipTap transaction 获取增量更新）
 const broadcastEdit = (transaction: any) => {
@@ -465,11 +508,16 @@ const broadcastEdit = (transaction: any) => {
   steps.forEach((step: any, index: number) => {
     const stepJSON = step.toJSON()
     console.log(`[broadcastEdit] 步骤 ${index}: stepType=${stepJSON.stepType}, from=${stepJSON.from}, to=${stepJSON.to}`)
+    console.log(`[broadcastEdit] 步骤 ${index} 完整信息:`, stepJSON)
+    console.log(`[broadcastEdit] 步骤 ${index} slice内容:`, step.slice)
 
     // 根据步骤类型发送不同的编辑操作
     if (stepJSON.stepType === 'replace') {
       const { from, to } = stepJSON
       const slice = step.slice
+
+      console.log(`[broadcastEdit] slice.content.size=`, slice?.content?.size)
+      console.log(`[broadcastEdit] slice.content=`, slice?.content)
 
       // 如果有内容插入
       if (slice && slice.content && slice.content.size > 0) {
@@ -477,23 +525,27 @@ const broadcastEdit = (transaction: any) => {
 
         if (from === to) {
           // 纯插入
-          console.log(`[broadcastEdit] 📤 发送插入: pos=${from}, content=`, content)
+          console.log(`[broadcastEdit] 📤 发送插入: pos=${from}, content=`, content, `openStart=${slice.openStart}, openEnd=${slice.openEnd}`)
           collaboration.sendEdit({
             documentId: documentId.value,
             type: 'insert',
             from,
             content,
+            openStart: slice.openStart,
+            openEnd: slice.openEnd,
             timestamp: Date.now(),
           })
         } else {
           // 替换（先删除，再插入）
-          console.log(`[broadcastEdit] 📤 发送替换: from=${from}, to=${to}, content=`, content)
+          console.log(`[broadcastEdit] 📤 发送替换: from=${from}, to=${to}, content=`, content, `openStart=${slice.openStart}, openEnd=${slice.openEnd}`)
           collaboration.sendEdit({
             documentId: documentId.value,
             type: 'replace',
             from,
             to,
             content,
+            openStart: slice.openStart,
+            openEnd: slice.openEnd,
             timestamp: Date.now(),
           })
         }
@@ -574,7 +626,7 @@ const editor = useEditor({
         class: 'editor-image',
       },
     }),
-    CollaborationCursor, // ⭐ 添加协同光标扩展
+    CollaborationCursor, //   添加协同光标扩展
     CommentMark, // 添加评论标记扩展
   ],
   editable: true,
@@ -592,7 +644,7 @@ const editor = useEditor({
     // 选区变化时强制更新（触发工具栏响应式更新）
     // Vue 会自动检测到 editor 的状态变化
 
-    // ⭐ 广播光标位置(使用防抖)
+    //   广播光标位置(使用防抖)
     if (collaboration && editor && documentId.value && !isApplyingRemoteEdit.value) {
       const position = calculateCursorPosition(editor)
       if (position) {
@@ -602,27 +654,27 @@ const editor = useEditor({
   }
 })
 
-// ⭐ 辅助函数: 计算光标的行列位置
+//   辅助函数: 计算光标的行列位置
 const calculateCursorPosition = (editor: any): { line: number; column: number } | null => {
   try {
     const { from } = editor.state.selection
     const doc = editor.state.doc
-    
+
     let line = 0
     let column = 0
     let found = false
-    
+
     console.log(`[calculateCursorPosition] 开始计算: from=${from}`)
-    
+
     // 遍历文档找到光标所在的块级节点
     doc.descendants((node: any, pos: number) => {
       if (found) return false
-      
+
       if (node.isBlock && node.type.name !== 'doc') {
         const nodeEnd = pos + node.nodeSize
-        
+
         console.log(`[calculateCursorPosition] 检查块: line=${line}, pos=${pos}, nodeSize=${node.nodeSize}, nodeEnd=${nodeEnd}, content.size=${node.content.size}, type=${node.type.name}`)
-        
+
         // 检查光标是否在当前块内
         if (from >= pos && from <= nodeEnd) {
           // 找到了！计算列号（相对于块内容开始位置）
@@ -634,14 +686,14 @@ const calculateCursorPosition = (editor: any): { line: number; column: number } 
           console.log(`[calculateCursorPosition] 节点内容: "${node.textContent}", 长度: ${node.content.size}`)
           return false
         }
-        
+
         // 如果还没找到，说明光标在后面的行
         line++
       }
-      
+
       return true
     })
-    
+
     if (!found) {
       console.warn('[calculateCursorPosition] ⚠️ 未找到光标所在块')
       return null
@@ -654,7 +706,7 @@ const calculateCursorPosition = (editor: any): { line: number; column: number } 
   }
 }
 
-// ⭐ 防抖函数: 限制光标更新频率
+//   防抖函数: 限制光标更新频率
 let cursorUpdateTimer: number | null = null
 const debouncedSendCursor = (position: { line: number; column: number }) => {
   if (cursorUpdateTimer) {
@@ -688,13 +740,13 @@ const fetchDocument = async () => {
     console.log('[fetchDocument] 📄 获取到的文档内容:', doc.content?.substring(0, 200))
     console.log('[fetchDocument] 📄 文档内容长度:', doc.content?.length)
 
-    // ⭐ 设置编辑器内容时禁用广播（防止加载时触发协同更新）
+    //   设置编辑器内容时禁用广播（防止加载时触发协同更新）
     isApplyingRemoteEdit.value = true
     console.log('[fetchDocument] 🔒 设置isApplyingRemoteEdit=true，准备加载内容')
     editor.value.commands.setContent(doc.content || '')
     console.log('[fetchDocument] ✅ 内容已加载，文档大小:', editor.value.state.doc.content.size)
     console.log('[fetchDocument] 📄 编辑器HTML长度:', editor.value.getHTML().length)
-    
+
     // 打印文档结构
     let structureLog = '[fetchDocument] 📐 文档结构:\n'
     editor.value.state.doc.descendants((node: any, pos: number) => {
@@ -703,7 +755,7 @@ const fetchDocument = async () => {
       }
     })
     console.log(structureLog)
-    
+
     // 延迟解除标记
     setTimeout(() => {
       isApplyingRemoteEdit.value = false
@@ -731,7 +783,7 @@ const fetchDocument = async () => {
 
     editor.value.setEditable(isEditable)
 
-    // ⭐ 更新编辑器模式 store 的权限信息
+    //   更新编辑器模式 store 的权限信息
     const currentUserId = userStore.userInfo?.id || ''
     // 优先使用 creatorId，其次使用 userId
     const ownerId = (doc as any).creatorId || (doc as any).userId || ''
@@ -1059,7 +1111,7 @@ onMounted(() => {
     }
   })
 
-  // ⭐ 监听权限更新
+  //   监听权限更新
   socketService.onPermissionUpdate((data) => {
     console.log('[EditorArea] 收到权限更新通知:', data)
 
@@ -1535,7 +1587,8 @@ onBeforeUnmount(() => {
 .editorContainer :deep(.ProseMirror .paragraph) {
   margin: 0.5rem 0;
   line-height: 1.6;
-  text-align: left; /* 明确指定左对齐 */
+  text-align: left;
+  /* 明确指定左对齐 */
 }
 
 /* 代码块样式 */
