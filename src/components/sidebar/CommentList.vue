@@ -6,8 +6,13 @@
     </div>
 
     <div class="sidebar-content">
+      <!-- Loading 状态 -->
+      <div v-if="loading" class="loading-container">
+        <a-spin tip="加载评论中..." />
+      </div>
+
       <!-- 新增评论区域 -->
-      <div v-if="hasSelection" class="new-comment-section">
+      <div v-else-if="hasSelection" class="new-comment-section">
         <a-alert type="info" banner closable>
           已选中: "{{ truncatedSelection }}"
         </a-alert>
@@ -68,7 +73,8 @@ import {
   createComment,
   replyComment,
   resolveComment,
-  deleteComment
+  deleteComment,
+  getCommentStats
 } from '@/api/comments'
 
 interface Props {
@@ -86,6 +92,8 @@ const activeTab = ref('unresolved')
 const hasSelection = ref(false)
 const selectedText = ref('')
 const selectionRange = ref({ from: 0, to: 0 })
+const stats = ref({ total: 0, resolved: 0, unresolved: 0 })
+const loading = ref(false)
 
 // 计算属性
 const unresolvedComments = computed(() =>
@@ -96,9 +104,7 @@ const resolvedComments = computed(() =>
   comments.value.filter(c => c.resolved)
 )
 
-const unreadCount = computed(() =>
-  unresolvedComments.value.length
-)
+const unreadCount = computed(() => stats.value.unresolved)
 
 const truncatedSelection = computed(() => {
   if (selectedText.value.length > 50) {
@@ -107,60 +113,32 @@ const truncatedSelection = computed(() => {
   return selectedText.value
 })
 
-// Mock 数据（后端 API 就绪前使用）
-const loadMockComments = () => {
-  comments.value = [
-    {
-      id: '1',
-      documentId: props.documentId || '',
-      userId: '1',
-      username: '张三',
-      avatar: '',
-      content: '这段内容需要补充更多细节',
-      startPos: 100,
-      endPos: 150,
-      quotedText: '示例文本内容',
-      resolved: false,
-      createdAt: new Date(Date.now() - 3600000).toISOString(),
-      updatedAt: new Date().toISOString(),
-      replies: [
-        {
-          id: 'r1',
-          commentId: '1',
-          userId: '2',
-          username: '李四',
-          avatar: '',
-          content: '好的，我会补充',
-          createdAt: new Date(Date.now() - 1800000).toISOString()
-        }
-      ]
-    },
-    {
-      id: '2',
-      documentId: props.documentId || '',
-      userId: '2',
-      username: '李四',
-      avatar: '',
-      content: '这里的逻辑已经处理完成',
-      startPos: 200,
-      endPos: 250,
-      quotedText: '另一段示例文本',
-      resolved: true,
-      createdAt: new Date(Date.now() - 7200000).toISOString(),
-      updatedAt: new Date().toISOString(),
-      replies: []
+// 加载评论统计
+const loadStats = async () => {
+  if (!props.documentId) return
+
+  try {
+    const res = await getCommentStats(props.documentId) as any
+    if (res && typeof res === 'object') {
+      stats.value = {
+        total: res.total || 0,
+        resolved: res.resolved || 0,
+        unresolved: res.unresolved || 0
+      }
     }
-  ]
+  } catch (error) {
+    console.warn('[CommentList] 加载统计失败', error)
+  }
 }
 
 // 加载评论列表
 const loadComments = async () => {
   if (!props.documentId) return
 
+  loading.value = true
   try {
-    const res = await getComments(props.documentId) as any
+    const res = await getComments(props.documentId, { includeReplies: true }) as any
     // 响应拦截器已经解包,直接使用 res
-    // 但需要转换数据格式
     const commentsData = Array.isArray(res) ? res : []
     comments.value = commentsData.map((c: any) => ({
       id: String(c.id),
@@ -175,11 +153,24 @@ const loadComments = async () => {
       resolved: c.resolved,
       createdAt: c.createdAt,
       updatedAt: c.updatedAt,
-      replies: [] // 稍后加载
+      replies: (c.replies || []).map((r: any) => ({
+        id: String(r.id),
+        commentId: String(r.parentId || c.id),
+        userId: String(r.userId),
+        username: r.user?.username || '未知用户',
+        avatar: r.user?.avatar,
+        content: r.content,
+        createdAt: r.createdAt
+      }))
     }))
+
+    // 同时加载统计
+    await loadStats()
   } catch (error) {
-    console.warn('[CommentList] 后端 API 未就绪，使用 Mock 数据', error)
-    loadMockComments()
+    console.error('[CommentList] 加载评论失败:', error)
+    Message.error('加载评论失败，请刷新重试')
+  } finally {
+    loading.value = false
   }
 }
 
@@ -216,86 +207,55 @@ const handleCreateComment = async () => {
       commentData.quotedText = selectedText.value
     }
 
-    try {
-      const res = await createComment(commentData) as any
-      
-      // 转换后端数据格式为前端格式
-      const comment: Comment = {
-        id: String(res.id),
-        documentId: String(res.documentId),
-        userId: String(res.userId),
-        username: res.user?.username || '未知用户',
-        avatar: res.user?.avatar,
-        content: res.content,
-        startPos: res.startPos,
-        endPos: res.endPos,
-        quotedText: res.quotedText,
-        resolved: res.resolved,
-        createdAt: res.createdAt,
-        updatedAt: res.updatedAt,
-        replies: []
-      }
-      
-      comments.value.unshift(comment)
+    const res = await createComment(commentData) as any
+    
+    // 转换后端数据格式为前端格式
+    const comment: Comment = {
+      id: String(res.id),
+      documentId: String(res.documentId),
+      userId: String(res.userId),
+      username: res.user?.username || '未知用户',
+      avatar: res.user?.avatar,
+      content: res.content,
+      startPos: res.startPos,
+      endPos: res.endPos,
+      quotedText: res.quotedText,
+      resolved: res.resolved,
+      createdAt: res.createdAt,
+      updatedAt: res.updatedAt,
+      replies: []
+    }
+    
+    comments.value.unshift(comment)
+    
+    // 更新统计
+    stats.value.total++
+    stats.value.unresolved++
 
-      if (props.editor) {
-        props.editor.chain()
-          .focus()
-          .setTextSelection({
-            from: selectionRange.value.from,
-            to: selectionRange.value.to
-          })
-          .setCommentMark({
-            commentId: comment.id,
-            userId: userStore.userInfo?.id,
-            timestamp: Date.now()
-          })
-          .run()
-      }
-
-      Message.success('评论已添加')
-    } catch (error) {
-      console.warn('[CommentList] 后端 API 未就绪，创建 Mock 评论', error)
-
-      const mockComment: Comment = {
-        id: `mock-${Date.now()}`,
-        documentId: props.documentId,
-        userId: String(userStore.userInfo?.id || 'mock-user'),
-        username: userStore.userInfo?.name || '当前用户',
-        avatar: userStore.userInfo?.avatar,
-        content: newCommentContent.value,
-        startPos: selectionRange.value.from,
-        endPos: selectionRange.value.to,
-        quotedText: selectedText.value,
-        resolved: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        replies: []
-      }
-
-      comments.value.unshift(mockComment)
-
-      if (props.editor) {
-        props.editor.chain()
-          .focus()
-          .setTextSelection({
-            from: selectionRange.value.from,
-            to: selectionRange.value.to
-          })
-          .setCommentMark({
-            commentId: mockComment.id,
-            userId: mockComment.userId,
-            timestamp: Date.now()
-          })
-          .run()
-      }
-
-      Message.success('评论已添加（Mock）')
+    // 在编辑器中添加高亮标记
+    if (props.editor) {
+      props.editor.chain()
+        .focus()
+        .setTextSelection({
+          from: selectionRange.value.from,
+          to: selectionRange.value.to
+        })
+        .setCommentMark({
+          commentId: comment.id,
+          userId: String(userStore.userInfo?.id),
+          timestamp: Date.now()
+        })
+        .run()
     }
 
+    Message.success('评论已添加')
     newCommentContent.value = ''
     hasSelection.value = false
     selectedText.value = ''
+  } catch (error: any) {
+    console.error('[CommentList] 创建评论失败:', error)
+    const errorMsg = error?.response?.data?.message || error?.message || '创建评论失败'
+    Message.error(errorMsg)
   } finally {
     creating.value = false
   }
@@ -315,25 +275,12 @@ const handleReply = async (commentId: string, content: string) => {
   try {
     await replyComment(props.documentId, { commentId, content })
     Message.success('回复已发送')
+    // 重新加载评论列表以获取最新回复
     await loadComments()
-  } catch (error) {
-    console.warn('[CommentList] 回复失败，使用 Mock', error)
-
-    const comment = comments.value.find(c => c.id === commentId)
-    if (comment) {
-      const mockReply = {
-        id: `mock-reply-${Date.now()}`,
-        commentId,
-        userId: String(userStore.userInfo?.id || 'mock-user'),
-        username: userStore.userInfo?.name || '当前用户',
-        avatar: userStore.userInfo?.avatar,
-        content,
-        createdAt: new Date().toISOString()
-      }
-      comment.replies = comment.replies || []
-      comment.replies.push(mockReply)
-      Message.success('回复已发送（Mock）')
-    }
+  } catch (error: any) {
+    console.error('[CommentList] 回复失败:', error)
+    const errorMsg = error?.response?.data?.message || error?.message || '回复失败'
+    Message.error(errorMsg)
   }
 }
 
@@ -343,16 +290,21 @@ const handleResolve = async (commentId: string) => {
 
   try {
     await resolveComment(props.documentId, commentId)
-    Message.success('评论已标记为已解决')
-    await loadComments()
-  } catch (error) {
-    console.warn('[CommentList] 标记失败，使用 Mock', error)
-
+    
+    // 实时更新评论状态（避免重新加载整个列表）
     const comment = comments.value.find(c => c.id === commentId)
     if (comment) {
       comment.resolved = true
-      Message.success('评论已标记为已解决（Mock）')
+      // 更新统计
+      stats.value.resolved++
+      stats.value.unresolved--
     }
+    
+    Message.success('评论已标记为已解决')
+  } catch (error: any) {
+    console.error('[CommentList] 标记失败:', error)
+    const errorMsg = error?.response?.data?.message || error?.message || '标记失败'
+    Message.error(errorMsg)
   }
 }
 
@@ -362,28 +314,32 @@ const handleDelete = async (commentId: string) => {
 
   try {
     await deleteComment(props.documentId, commentId)
-    Message.success('评论已删除')
+    
+    // 从本地列表中移除
+    const index = comments.value.findIndex(c => c.id === commentId)
+    if (index > -1) {
+      const comment = comments.value[index]
+      comments.value.splice(index, 1)
+      
+      // 更新统计
+      stats.value.total--
+      if (comment.resolved) {
+        stats.value.resolved--
+      } else {
+        stats.value.unresolved--
+      }
+    }
 
     // 从编辑器中移除评论标记
     if (props.editor) {
       props.editor.commands.unsetCommentMark(commentId)
     }
-
-    await loadComments()
-  } catch (error) {
-    console.warn('[CommentList] 删除失败，使用 Mock', error)
-
-    const index = comments.value.findIndex(c => c.id === commentId)
-    if (index > -1) {
-      comments.value.splice(index, 1)
-
-      // 从编辑器中移除评论标记
-      if (props.editor) {
-        props.editor.commands.unsetCommentMark(commentId)
-      }
-
-      Message.success('评论已删除（Mock）')
-    }
+    
+    Message.success('评论已删除')
+  } catch (error: any) {
+    console.error('[CommentList] 删除失败:', error)
+    const errorMsg = error?.response?.data?.message || error?.message || '删除失败'
+    Message.error(errorMsg)
   }
 }
 
@@ -453,6 +409,13 @@ onMounted(() => {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
+}
+
+.loading-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
 }
 
 .new-comment-section {

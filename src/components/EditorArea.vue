@@ -720,6 +720,57 @@ const debouncedSendCursor = (position: { line: number; column: number }) => {
   }, 150) as unknown as number // 150ms防抖
 }
 
+// 恢复评论高亮标记
+const restoreCommentHighlights = async () => {
+  if (!documentId.value || !editor.value) return
+
+  try {
+    console.log('[restoreCommentHighlights] 开始加载评论...')
+    
+    // 动态导入getComments API
+    const { getComments } = await import('@/api/comments')
+    const res = await getComments(documentId.value) as any
+    
+    if (!res || !Array.isArray(res)) {
+      console.log('[restoreCommentHighlights] 无评论数据')
+      return
+    }
+
+    console.log(`[restoreCommentHighlights] 加载到 ${res.length} 条评论`)
+
+    // 为每条评论恢复高亮标记
+    res.forEach((comment: any) => {
+      const commentId = String(comment.id)
+      const startPos = comment.startPos
+      const endPos = comment.endPos
+
+      if (typeof startPos === 'number' && typeof endPos === 'number' && startPos < endPos) {
+        // 验证位置是否有效
+        const docSize = editor.value.state.doc.content.size
+        if (startPos >= 0 && endPos <= docSize) {
+          editor.value.chain()
+            .setTextSelection({ from: startPos, to: endPos })
+            .setCommentMark({
+              commentId,
+              userId: String(comment.userId),
+              timestamp: new Date(comment.createdAt).getTime()
+            })
+            .run()
+          
+          console.log(`[restoreCommentHighlights] ✅ 恢复评论 ${commentId} 高亮: ${startPos}-${endPos}`)
+        } else {
+          console.warn(`[restoreCommentHighlights] ⚠️ 评论 ${commentId} 位置超出文档范围: ${startPos}-${endPos}, 文档大小: ${docSize}`)
+        }
+      }
+    })
+
+    console.log('[restoreCommentHighlights] 评论高亮恢复完成')
+  } catch (error) {
+    console.warn('[restoreCommentHighlights] 加载评论失败（可能评论功能未启用）:', error)
+    // 不抛出错误，避免影响文档加载
+  }
+}
+
 // 获取文档数据
 const fetchDocument = async () => {
   if (!documentId.value || !editor.value || loading.value) return
@@ -761,6 +812,9 @@ const fetchDocument = async () => {
       isApplyingRemoteEdit.value = false
       console.log('[fetchDocument] 🔓 解除isApplyingRemoteEdit标志')
     }, 100)
+
+    // ⭐ 加载评论并恢复高亮标记
+    await restoreCommentHighlights()
 
     // 根据权限和协同开关状态设置编辑器是否可编辑
     const permission = (doc as any).permission
