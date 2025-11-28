@@ -2,17 +2,17 @@
   <div class="ai-assistant-sidebar">
     <div class="sidebar-header">
       <h3>🤖 AI 助手</h3>
-      <p class="subtitle">开发中...</p>
+      <!-- <p class="subtitle">开发中...</p> -->
     </div>
 
     <div class="sidebar-content">
       <!-- 快捷操作 -->
-      <div class="ai-actions">
+      <!-- <div class="ai-actions">
         <a-button long disabled>✨ 润色文本</a-button>
         <a-button long disabled>📝 扩写内容</a-button>
         <a-button long disabled>📋 生成摘要</a-button>
         <a-button long disabled>🌐 翻译</a-button>
-      </div>
+      </div> -->
 
       <!-- 对话框 -->
       <div class="ai-chat">
@@ -22,7 +22,7 @@
           </div>
         </div>
 
-        <a-textarea placeholder="向 AI 提问..." disabled :auto-size="{ minRows: 3, maxRows: 5 }" />
+        <a-textarea placeholder="向 AI 提问..." :auto-size="{ minRows: 3, maxRows: 5 }" />
       </div>
     </div>
   </div>

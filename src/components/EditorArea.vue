@@ -726,11 +726,11 @@ const restoreCommentHighlights = async () => {
 
   try {
     console.log('[restoreCommentHighlights] 开始加载评论...')
-    
+
     // 动态导入getComments API
     const { getComments } = await import('@/api/comments')
     const res = await getComments(documentId.value) as any
-    
+
     if (!res || !Array.isArray(res)) {
       console.log('[restoreCommentHighlights] 无评论数据')
       return
@@ -756,7 +756,7 @@ const restoreCommentHighlights = async () => {
               timestamp: new Date(comment.createdAt).getTime()
             })
             .run()
-          
+
           console.log(`[restoreCommentHighlights] ✅ 恢复评论 ${commentId} 高亮: ${startPos}-${endPos}`)
         } else {
           console.warn(`[restoreCommentHighlights] ⚠️ 评论 ${commentId} 位置超出文档范围: ${startPos}-${endPos}, 文档大小: ${docSize}`)

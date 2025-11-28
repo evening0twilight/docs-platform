@@ -201,14 +201,14 @@ const handleCreateComment = async () => {
       startPos: selectionRange.value.from,
       endPos: selectionRange.value.to
     }
-    
+
     // 只有当有选中文本时才添加 quotedText
     if (selectedText.value && selectedText.value.trim()) {
       commentData.quotedText = selectedText.value
     }
 
     const res = await createComment(commentData) as any
-    
+
     // 转换后端数据格式为前端格式
     const comment: Comment = {
       id: String(res.id),
@@ -225,9 +225,9 @@ const handleCreateComment = async () => {
       updatedAt: res.updatedAt,
       replies: []
     }
-    
+
     comments.value.unshift(comment)
-    
+
     // 更新统计
     stats.value.total++
     stats.value.unresolved++
@@ -290,7 +290,7 @@ const handleResolve = async (commentId: string) => {
 
   try {
     await resolveComment(props.documentId, commentId)
-    
+
     // 实时更新评论状态（避免重新加载整个列表）
     const comment = comments.value.find(c => c.id === commentId)
     if (comment) {
@@ -299,7 +299,7 @@ const handleResolve = async (commentId: string) => {
       stats.value.resolved++
       stats.value.unresolved--
     }
-    
+
     Message.success('评论已标记为已解决')
   } catch (error: any) {
     console.error('[CommentList] 标记失败:', error)
@@ -314,13 +314,13 @@ const handleDelete = async (commentId: string) => {
 
   try {
     await deleteComment(props.documentId, commentId)
-    
+
     // 从本地列表中移除
     const index = comments.value.findIndex(c => c.id === commentId)
     if (index > -1) {
       const comment = comments.value[index]
       comments.value.splice(index, 1)
-      
+
       // 更新统计
       stats.value.total--
       if (comment.resolved) {
@@ -334,7 +334,7 @@ const handleDelete = async (commentId: string) => {
     if (props.editor) {
       props.editor.commands.unsetCommentMark(commentId)
     }
-    
+
     Message.success('评论已删除')
   } catch (error: any) {
     console.error('[CommentList] 删除失败:', error)
