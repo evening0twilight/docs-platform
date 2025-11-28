@@ -8,13 +8,13 @@
     </a-tooltip>
 
     <!-- AI 助手 -->
-    <!-- <a-tooltip content="AI 助手">
+    <a-tooltip content="AI 助手">
       <a-button size="small" :type="currentMode === EditorMode.AI_ASSISTANT ? 'primary' : 'secondary'"
         :disabled="!features.aiEnabled && !isDocumentOwner" @click="handleModeSwitch(EditorMode.AI_ASSISTANT)">
         🤖 AI
         <span v-if="features.aiEnabled" class="feature-badge">●</span>
       </a-button>
-    </a-tooltip> -->
+    </a-tooltip>
 
     <!-- 评论 -->
     <a-tooltip content="评论">
