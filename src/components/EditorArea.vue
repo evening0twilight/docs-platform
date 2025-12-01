@@ -89,7 +89,7 @@
       <!-- 侧边栏内容 -->
       <div v-show="!sidebarCollapsed" class="sidebar-content">
         <!-- AI 助手 -->
-        <AIAssistant v-if="editorModeStore.currentMode === EditorMode.AI_ASSISTANT" />
+        <AIAssistant v-if="editorModeStore.currentMode === EditorMode.AI_ASSISTANT" :editor="editor" />
 
         <!-- 评论列表 -->
         <CommentList v-else-if="editorModeStore.currentMode === EditorMode.COMMENT" :document-id="documentId"
@@ -1198,9 +1198,21 @@ onMounted(() => {
     }
   })
 
+  // 添加全局快捷键: Ctrl+J 打开AI助手
+  const handleKeyDown = (e: KeyboardEvent) => {
+    if (e.ctrlKey && e.key === 'j') {
+      e.preventDefault()
+      if (documentId.value) {
+        editorModeStore.switchMode(EditorMode.AI_ASSISTANT)
+      }
+    }
+  }
+  window.addEventListener('keydown', handleKeyDown)
+
   // 组件卸载时移除监听器
   onBeforeUnmount(() => {
     window.removeEventListener('manual-save-request', handleGlobalSave)
+    window.removeEventListener('keydown', handleKeyDown)
   })
 })
 
