@@ -1,26 +1,17 @@
 <template>
   <div class="tab-bar" v-if="tabs.length > 0">
     <div class="tabs-container">
-      <div         
-        v-for="(tab, index) in tabs"
-        :key="tab.id"
-        class="tab"
-        :class="{ active: activeTabId === tab.id }"
-        @click="switchTab(tab.id)"
-      >
+      <div v-for="(tab, index) in tabs" :key="tab.id" class="tab" :class="{ active: activeTabId === tab.id }"
+        @click="switchTab(tab.id)" :title="tab.title">
         <span class="tab-title">{{ tab.title }}</span>
         <span v-if="tab.isModified" class="modified-indicator">•</span>
-        <button 
-          class="close-btn"
-          @click.stop="closeTab(tab.id)"
-          :title="`关闭 ${tab.title}`"
-        >
+        <button class="close-btn" @click.stop="closeTab(tab.id)" :title="`关闭 ${tab.title}`">
           ×
         </button>
       </div>
     </div>
   </div>
-  
+
   <!-- 当没有标签时显示的调试信息 -->
   <div v-else class="no-tabs-debug" style="padding: 8px; color: #666; font-size: 14px;">
     暂无标签页 (点击左侧文档来打开标签)
@@ -60,16 +51,16 @@ const switchTab = (tabId: string) => {
 // 关闭标签
 const closeTab = (tabId: string) => {
   const tab = tabs.value.find(t => t.id === tabId)
-  
+
   // 如果有未保存的修改，弹出确认对话框
   if (tab?.isModified) {
     if (!confirm(`文档 "${tab.title}" 有未保存的修改，确定要关闭吗？`)) {
       return
     }
   }
-  
+
   tabsStore.closeTab(tabId)
-  
+
   // 如果关闭后没有标签了，跳转到工作台首页
   if (tabsStore.tabsCount === 0) {
     router.push('/workspace')
@@ -122,7 +113,7 @@ const closeTab = (tabId: string) => {
 .tab.active {
   background: white;
   border-bottom: 2px solid #1890ff;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .tab-title {
@@ -146,7 +137,7 @@ const closeTab = (tabId: string) => {
   height: 18px;
   border-radius: 50%;
   border: none;
-  background: rgba(0,0,0,0.1);
+  background: rgba(0, 0, 0, 0.1);
   color: #666;
   cursor: pointer;
   display: flex;
@@ -158,7 +149,7 @@ const closeTab = (tabId: string) => {
 }
 
 .close-btn:hover {
-  background: rgba(0,0,0,0.2);
+  background: rgba(0, 0, 0, 0.2);
   color: #333;
 }
 

@@ -47,6 +47,29 @@ export const useTabsStore = defineStore('tabs', {
       }
     },
 
+    // 添加自定义标签(用于版本预览等)
+    addTab(tab: { id: string, title: string, route: string, isModified?: boolean, type?: 'document' | 'folder' }) {
+      const existingTab = this.tabs.find(t => t.id === tab.id)
+      
+      if (existingTab) {
+        // 如果标签已存在，直接激活
+        this.activeTabId = tab.id
+      } else {
+        // 创建新标签
+        const newTab: Tab = {
+          id: tab.id,
+          title: tab.title,
+          type: tab.type || 'document',
+          route: tab.route,
+          isActive: false,
+          isModified: tab.isModified || false
+        }
+        
+        this.tabs.push(newTab)
+        this.activeTabId = tab.id
+      }
+    },
+
     // 关闭标签
     closeTab(tabId: string) {
       const index = this.tabs.findIndex(tab => tab.id === tabId)

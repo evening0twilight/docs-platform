@@ -48,7 +48,7 @@
               :online-users-count="collaboration?.onlineUsers.value.length || 0" :unread-comments-count="0"
               :is-document-owner="editorModeStore.permissions.isDocumentOwner" @switch-mode="handleModeSwitch"
               @enable-collaboration="handleEnableCollaboration" @disable-collaboration="handleDisableCollaboration"
-              @close-all="handleCloseAll" />
+              @close-all="handleCloseAll" @manual-save="handleManualSaveClick" />
           </div>
 
           <!-- 右侧:分享按钮(固定) -->
@@ -104,7 +104,7 @@
           @collaboration-toggled="handleCollaborationToggled" @permission-changed="handlePermissionChanged" />
 
         <!-- 历史版本 -->
-        <HistoryTimeline v-else-if="editorModeStore.currentMode === EditorMode.HISTORY" />
+        <HistoryTimeline v-else-if="editorModeStore.currentMode === EditorMode.HISTORY" :editor="editor" />
       </div>
     </div>
 
@@ -114,7 +114,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, reactive, toRefs, onBeforeUnmount, watch, computed } from 'vue';
+import { ref, onMounted, reactive, toRefs, onBeforeUnmount, watch, computed, nextTick } from 'vue';
 import { useEditor, EditorContent } from '@tiptap/vue-3'
 import { useRoute } from 'vue-router'
 import { useTabsStore } from '@/store/tabs'
@@ -122,6 +122,7 @@ import { useEditorModeStore } from '@/store/editorMode'
 import { EditorMode } from '@/store/editorMode'
 import { useUserStore } from '@/store/user'
 import { getDocument, saveDocumentContent } from '@/api/docs'
+import { getVersionDetail } from '@/api/version'
 import Highlight from '@tiptap/extension-highlight'
 import Superscript from '@tiptap/extension-superscript'
 import Subscript from '@tiptap/extension-subscript'
@@ -142,9 +143,13 @@ import AIAssistant from './sidebar/AIAssistant.vue';
 import CommentList from './sidebar/CommentList.vue';
 import CollaborationUsers from './sidebar/CollaborationUsers.vue';
 import HistoryTimeline from './sidebar/HistoryTimeline.vue';
+import VersionHistory from './VersionHistory.vue';
+import VersionCompare from './VersionCompare.vue';
 import { useCollaboration } from '@/composables/useCollaboration'
+import { useAutoSave } from '@/composables/useAutoSave'
 import { socketService } from '@/services/socket'  //   导入 socketService
 import { Message } from '@arco-design/web-vue'
+import type { DocumentVersion } from '@/types/version'
 import '@/styles/collaboration.scss' //   导入协同光标样式
 
 // 定义props（支持路由参数）
@@ -160,8 +165,10 @@ const userStore = useUserStore()
 // 获取当前模式
 const currentMode = computed(() => editorModeStore.currentMode)
 
-// 计算当前文档ID
+// 计算当前文档ID和版本ID
 const documentId = computed(() => props.id || route.params.id as string)
+const versionId = computed(() => route.params.versionId as string | undefined)
+const isVersionPreview = computed(() => !!versionId.value)
 
 // 响应式状态
 const loading = ref(false)
@@ -654,6 +661,17 @@ const editor = useEditor({
   }
 })
 
+// 初始化自动保存功能
+const {
+  saveStatus,
+  lastSavedAt,
+  manualSave: handleManualSave,
+} = useAutoSave(
+  documentId,
+  computed(() => editor.value?.getJSON()),
+  computed(() => isModified.value),
+)
+
 //   辅助函数: 计算光标的行列位置
 const calculateCursorPosition = (editor: any): { line: number; column: number } | null => {
   try {
@@ -771,19 +789,56 @@ const restoreCommentHighlights = async () => {
   }
 }
 
+// 加载版本内容
+const fetchVersionContent = async () => {
+  if (!versionId.value || !documentId.value || !editor.value) return
+
+  try {
+    loading.value = true
+    console.log('加载版本内容:', versionId.value)
+
+    // 获取版本详情
+    const versionDetail = await getVersionDetail(Number(documentId.value), Number(versionId.value))
+
+    // 解析版本内容
+    let editorContent = versionDetail.content || ''
+    if (typeof editorContent === 'string' && editorContent.startsWith('{')) {
+      try {
+        editorContent = JSON.parse(editorContent)
+        console.log('[fetchVersionContent] 版本内容已解析')
+      } catch (e) {
+        console.warn('[fetchVersionContent] JSON解析失败,使用原始字符串:', e)
+      }
+    }
+
+    // 设置编辑器为只读模式
+    editor.value.setEditable(false)
+
+    // 设置内容
+    editor.value.commands.setContent(editorContent)
+
+    console.log('[fetchVersionContent] 版本内容已加载')
+  } catch (error) {
+    console.error('加载版本失败:', error)
+    Message.error('加载版本失败')
+  } finally {
+    loading.value = false
+  }
+}
+
 // 获取文档数据
 const fetchDocument = async () => {
   if (!documentId.value || !editor.value || loading.value) return
 
-  // 防止重复请求同一个文档
-  if (documentData.value && documentData.value.id.toString() === documentId.value) {
-    console.log('文档已加载，跳过重复请求:', documentId.value)
+  // 如果是版本预览,加载版本内容
+  if (isVersionPreview.value && versionId.value) {
+    await fetchVersionContent()
     return
   }
 
   try {
     loading.value = true
-    console.log('加载文档:', documentId.value)
+    console.log('[fetchDocument] 加载正常文档:', documentId.value)
 
     const doc = await getDocument(documentId.value)
     documentData.value = doc
@@ -791,10 +846,23 @@ const fetchDocument = async () => {
     console.log('[fetchDocument] 📄 获取到的文档内容:', doc.content?.substring(0, 200))
     console.log('[fetchDocument] 📄 文档内容长度:', doc.content?.length)
 
+    // 处理文档内容格式
+    let editorContent = doc.content || ''
+
+    // 如果content是JSON字符串,需要解析
+    if (typeof editorContent === 'string' && editorContent.startsWith('{')) {
+      try {
+        editorContent = JSON.parse(editorContent)
+        console.log('[fetchDocument] 📄 内容已从JSON字符串解析为对象')
+      } catch (e) {
+        console.warn('[fetchDocument] ⚠️  JSON解析失败,使用原始字符串:', e)
+      }
+    }
+
     //   设置编辑器内容时禁用广播（防止加载时触发协同更新）
     isApplyingRemoteEdit.value = true
     console.log('[fetchDocument] 🔒 设置isApplyingRemoteEdit=true，准备加载内容')
-    editor.value.commands.setContent(doc.content || '')
+    editor.value.commands.setContent(editorContent)
     console.log('[fetchDocument] ✅ 内容已加载，文档大小:', editor.value.state.doc.content.size)
     console.log('[fetchDocument] 📄 编辑器HTML长度:', editor.value.getHTML().length)
 
@@ -982,6 +1050,29 @@ const handleCloseAll = () => {
   editorModeStore.closeAllFeatures()
 }
 
+// 手动保存 (调用useAutoSave的manualSave)
+const handleManualSaveClick = async () => {
+  if (!editor.value || !documentId.value) return
+
+  try {
+    await handleManualSave()
+
+    // 重新加载文档内容(确保显示最新保存的内容)
+    await fetchDocument()
+
+    // 如果在历史模式,需要刷新版本列表(通过key强制刷新组件)
+    if (editorModeStore.currentMode === EditorMode.HISTORY) {
+      // 切换到其他模式再切换回来,触发组件重新挂载
+      const currentMode = editorModeStore.currentMode
+      editorModeStore.switchMode(EditorMode.NORMAL)
+      await nextTick()
+      editorModeStore.switchMode(currentMode)
+    }
+  } catch (error) {
+    console.error('手动保存失败:', error)
+  }
+}
+
 // 启用协作
 const handleEnableCollaboration = async () => {
   console.log('[EditorArea] 启用协作')
@@ -1125,6 +1216,23 @@ watch(() => documentId.value, (newId, oldId) => {
   if (newId && newId !== oldId && editor.value) {
     console.log('文档ID变化，重新加载:', newId)
     fetchDocument()
+  }
+})
+
+// 监听版本预览状态变化
+watch([isVersionPreview, versionId], ([isPreview, newVersionId], [wasPreview]) => {
+  console.log('[EditorArea] 版本预览状态变化:', { isPreview, newVersionId, wasPreview })
+
+  if (editor.value && documentId.value) {
+    if (isPreview && newVersionId) {
+      // 切换到版本预览
+      console.log('[EditorArea] 加载版本预览:', newVersionId)
+      fetchDocument()
+    } else if (wasPreview && !isPreview) {
+      // 从版本预览切换回正常文档
+      console.log('[EditorArea] 从版本预览返回正常文档')
+      fetchDocument()
+    }
   }
 })
 
@@ -1531,7 +1639,7 @@ onBeforeUnmount(() => {
 
 .editorContainer :deep(.ProseMirror) {
   width: 100%;
-  height: calc(100vh - 212px);
+  height: calc(100vh - 213px);
   border: 1px black solid;
   border-radius: 10px;
   display: block;
