@@ -9,7 +9,7 @@
           <TabBar />
         </a-layout-header>
         <a-layout class="h-full w-full content-layout">
-        <!-- <a-layout style="padding: 0 24px" class="h-full w-full">
+          <!-- <a-layout style="padding: 0 24px" class="h-full w-full">
           <a-breadcrumb :style="{ margin: '4px 0' }">
             <a-breadcrumb-item v-for="item in breadcrumbItems" :key="item.id">
               {{ item.name }}
@@ -60,8 +60,12 @@ const updateBreadcrumb = async () => {
     if (activeTab && activeTab.type === 'document') {
       console.log('找到活动文档标签:', activeTab)
 
-      // 获取文档的完整路径
-      const docId = activeTab.id
+      // 获取文档ID，如果是版本预览标签(格式: 19-v2)，提取真实文档ID
+      let docId = activeTab.id
+      if (docId.includes('-v')) {
+        // 版本预览标签，提取文档ID
+        docId = docId.split('-v')[0]
+      }
       console.log('获取文档路径, docId:', docId)
 
       try {

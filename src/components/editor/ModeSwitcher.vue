@@ -54,13 +54,21 @@
       </template>
     </a-dropdown>
 
-    <!-- 历史版本 -->
-    <a-tooltip content="历史版本">
-      <a-button size="small" :type="currentMode === EditorMode.HISTORY ? 'primary' : 'secondary'"
-        @click="handleModeSwitch(EditorMode.HISTORY)">
+    <!-- 历史版本 - 改为下拉菜单 -->
+    <a-dropdown @select="handleHistoryAction">
+      <a-button size="small" :type="currentMode === EditorMode.HISTORY ? 'primary' : 'secondary'">
         🕐 历史
+        <icon-down />
       </a-button>
-    </a-tooltip>
+      <template #content>
+        <a-doption value="view">
+          <icon-history /> 查看历史版本
+        </a-doption>
+        <a-doption value="manual-save">
+          <icon-save /> 保存当前版本
+        </a-doption>
+      </template>
+    </a-dropdown>
   </div>
 </template>
 
@@ -72,7 +80,9 @@ import {
   IconPlayCircle,
   IconUserGroup,
   IconPoweroff,
-  IconLock
+  IconLock,
+  IconHistory,
+  IconSave
 } from '@arco-design/web-vue/es/icon'
 
 interface Props {
@@ -94,6 +104,7 @@ const emit = defineEmits<{
   enableCollaboration: []
   disableCollaboration: []
   closeAll: []
+  manualSave: []
 }>()
 
 /**
@@ -101,6 +112,17 @@ const emit = defineEmits<{
  */
 const handleModeSwitch = (mode: EditorMode) => {
   emit('switchMode', mode)
+}
+
+/**
+ * 处理历史操作
+ */
+const handleHistoryAction = (value: string | number | Record<string, any> | undefined) => {
+  if (value === 'view') {
+    handleModeSwitch(EditorMode.HISTORY)
+  } else if (value === 'manual-save') {
+    emit('manualSave')
+  }
 }
 
 /**

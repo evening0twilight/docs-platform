@@ -1,48 +1,59 @@
 <template>
   <div class="history-timeline-sidebar">
     <div class="sidebar-header">
-      <h3>🕐 历史版本</h3>
-      <p class="subtitle">开发中...</p>
+      <h3 class="text-black">🕐 历史版本</h3>
+      <a-alert type="warning" :closable="false" style="margin-top: 12px;">
+        除每天自动最后一次自动保存的和手动保存的版本，其他均不作为历史版本进行保存。望您及时保存重要版本。
+      </a-alert>
     </div>
 
     <div class="sidebar-content">
-      <!-- 版本时间线 -->
-      <a-timeline>
-        <a-timeline-item label="刚刚">
-          <div class="version-item">
-            <div class="version-header">
-              <span class="version-number">v1</span>
-              <span class="version-author">当前版本</span>
-            </div>
-            <div class="version-summary">
-              正在编辑中...
-            </div>
-          </div>
-        </a-timeline-item>
-
-        <a-timeline-item label="示例" :line-type="'dashed'">
-          <div class="version-item disabled">
-            <div class="version-header">
-              <span class="version-number">v0</span>
-              <span class="version-author">历史版本</span>
-            </div>
-            <div class="version-summary">
-              版本历史功能开发中...
-            </div>
-            <div class="version-actions">
-              <a-button size="small" disabled>预览</a-button>
-              <a-button size="small" disabled>对比</a-button>
-              <a-button size="small" type="primary" disabled>恢复</a-button>
-            </div>
-          </div>
-        </a-timeline-item>
-      </a-timeline>
+      <VersionHistory v-if="documentId && editor" :document-id="Number(documentId)" :editor="editor"
+        @view-version="handleViewVersion" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-// 历史版本功能框架，待实现
+import { computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import type { Editor } from '@tiptap/vue-3'
+import type { DocumentVersion } from '@/types/version'
+import VersionHistory from '../VersionHistory.vue'
+import { useTabsStore } from '@/store/tabs'
+
+const props = defineProps<{
+  editor: Editor | null
+}>()
+
+const route = useRoute()
+const router = useRouter()
+const tabsStore = useTabsStore()
+const documentId = computed(() => route.params.id as string)
+
+// 处理查看版本
+function handleViewVersion(version: DocumentVersion) {
+  const currentDocId = route.params.id as string
+
+  // 获取当前文档名称
+  const currentTab = tabsStore.tabs.find(t => t.id === currentDocId)
+  const docName = currentTab?.title || '文档'
+
+  // 生成版本预览ID和标题
+  const versionId = `${currentDocId}-v${version.versionNumber}`
+  const versionTitle = `${docName} - 版本${version.versionNumber}`
+
+  // 添加版本预览标签
+  tabsStore.addTab({
+    id: versionId,
+    title: versionTitle,
+    route: `/workspace/document/${currentDocId}/version/${version.id}`,
+    isModified: false,
+  })
+
+  // 跳转到版本预览路由
+  router.push(`/workspace/document/${currentDocId}/version/${version.id}`)
+}
 </script>
 
 <style scoped>
@@ -50,6 +61,7 @@
   height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .sidebar-header {
@@ -58,68 +70,13 @@
 }
 
 .sidebar-header h3 {
-  margin: 0 0 4px 0;
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.subtitle {
   margin: 0;
-  font-size: 12px;
-  color: var(--color-text-3);
+  font-size: 16px;
+  font-weight: 600;
 }
 
 .sidebar-content {
   flex: 1;
-  overflow-y: auto;
-  padding: 16px;
-}
-
-.version-item {
-  padding: 12px;
-  background: var(--color-fill-2);
-  border-radius: 4px;
-  transition: all 0.2s;
-}
-
-.version-item:hover:not(.disabled) {
-  background: var(--color-fill-3);
-}
-
-.version-item.disabled {
-  opacity: 0.6;
-}
-
-.version-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.version-number {
-  padding: 2px 8px;
-  background: var(--color-primary-light-1);
-  color: var(--color-primary);
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.version-author {
-  font-size: 13px;
-  color: var(--color-text-2);
-}
-
-.version-summary {
-  font-size: 13px;
-  color: var(--color-text-3);
-  margin-bottom: 8px;
-  line-height: 1.6;
-}
-
-.version-actions {
-  display: flex;
-  gap: 8px;
+  overflow: hidden;
 }
 </style>

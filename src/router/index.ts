@@ -37,6 +37,16 @@ const routes: RouteRecordRaw[] = [
           title: '文档详情',
           keepAlive: true
         }
+      },
+      {
+        path: 'document/:id/version/:versionId',
+        name: 'DocumentVersion',
+        component: () => import('@/components/EditorArea.vue'),
+        props: true,
+        meta: {
+          title: '版本预览',
+          keepAlive: false
+        }
       }
     ]
   },
