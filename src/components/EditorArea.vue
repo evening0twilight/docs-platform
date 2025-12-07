@@ -1260,8 +1260,32 @@ onMounted(() => {
     }
   }
 
+  // 监听版本恢复事件
+  const handleRestoreVersion = (event: CustomEvent) => {
+    if (editor.value && event.detail?.content) {
+      console.log('[EditorArea] 收到版本恢复事件，更新内容')
+
+      // 标记为远程更新，防止触发自动保存
+      isApplyingRemoteEdit.value = true
+
+      editor.value.commands.setContent(event.detail.content)
+
+      // 重置修改状态
+      isModified.value = false
+      if (documentId.value) {
+        tabsStore.markModified(documentId.value, false)
+      }
+
+      // 延迟恢复标志
+      setTimeout(() => {
+        isApplyingRemoteEdit.value = false
+      }, 100)
+    }
+  }
+
   // 添加事件监听器
   window.addEventListener('manual-save-request', handleGlobalSave)
+  window.addEventListener('restore-version', handleRestoreVersion as EventListener)
 
   // 监听协同状态变化
   socketService.onCollaborationToggle((data) => {
@@ -1320,6 +1344,7 @@ onMounted(() => {
   // 组件卸载时移除监听器
   onBeforeUnmount(() => {
     window.removeEventListener('manual-save-request', handleGlobalSave)
+    window.removeEventListener('restore-version', handleRestoreVersion as EventListener)
     window.removeEventListener('keydown', handleKeyDown)
   })
 })

@@ -138,9 +138,11 @@ function handleKeydown(e: KeyboardEvent) {
   }
 }
 
-// 格式化消息内容(简单的换行处理)
+// 格式化消息内容(简单的换行处理,并过滤AI_COMMAND标记)
 function formatMessage(content: string): string {
-  return content.replace(/\n/g, '<br>');
+  // 移除 [AI_COMMAND: ...] 标记
+  const filtered = content.replace(/\[AI_COMMAND:.*?\]/g, '');
+  return filtered.replace(/\n/g, '<br>');
 }
 
 // 格式化时间

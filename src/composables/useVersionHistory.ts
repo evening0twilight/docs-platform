@@ -88,16 +88,19 @@ export function useVersionHistory(documentId: number, editor: Editor | null) {
           try {
             loading.value = true;
 
-            // 1. 调用恢复API
+            // 1. 调用恢复API(后端会更新文档内容并创建恢复版本记录)
             await restoreDocumentVersion(documentId, { versionId });
 
             // 2. 获取恢复后的内容
             const detail = await getVersionDetail(documentId, versionId);
 
-            // 3. 更新编辑器内容
+            // 3. 更新编辑器内容(需要标记为远程更新,避免触发自动保存)
             if (editor) {
               const content = JSON.parse(detail.content);
-              editor.commands.setContent(content);
+              
+              // 标记为远程更新,防止触发自动保存
+              const event = new CustomEvent('restore-version', { detail: { content } });
+              window.dispatchEvent(event);
             }
 
             // 4. 重新加载版本列表
