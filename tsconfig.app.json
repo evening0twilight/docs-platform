@@ -6,7 +6,7 @@
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "composite": true,  // 添加此行
     "baseUrl": ".",
-    "target": "ES2017", // 更改为 ES2017 以获得更好的 Promise 支持
+    "target": "ES2018", // 支持正则表达式 s 标志
     "lib": ["DOM", "ES2015", "ES2016", "ES2017", "ES2018"],
     "module": "ESNext",
     "moduleResolution": "bundler",
