@@ -140,8 +140,8 @@ function handleKeydown(e: KeyboardEvent) {
 
 // 格式化消息内容(简单的换行处理,并过滤AI_COMMAND标记)
 function formatMessage(content: string): string {
-  // 移除 [AI_COMMAND: ...] 标记
-  const filtered = content.replace(/\[AI_COMMAND:.*?\]/g, '');
+  // 移除 [AI_COMMAND: ...] 标记 (支持多行匹配)
+  const filtered = content.replace(/\[AI_COMMAND:[^\]]*\]/gs, '');
   return filtered.replace(/\n/g, '<br>');
 }
 

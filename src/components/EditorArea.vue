@@ -134,6 +134,9 @@ import Image from '@tiptap/extension-image'
 import { CollaborationCursor } from '@/extensions/CollaborationCursor'
 import { CommentMark } from '@/extensions/CommentMark'
 import { Slice, Fragment } from '@tiptap/pm/model'  //   导入ProseMirror类型
+import { useYjsCollaboration } from '@/composables/useYjsCollaboration'
+import { getYjsExtensions, generateUserColor } from '@/extensions/yjsExtensions'
+import { yjsConfig } from '@/config/yjsConfig'
 import ToolList from './editor/ToolList.vue';
 import ModeSwitcher from './editor/ModeSwitcher.vue';
 import EmptyState from './EmptyState.vue';
@@ -179,6 +182,10 @@ const isRemoteUpdate = ref(false) // 标记是否为远程更新,避免循环发
 const sidebarCollapsed = ref(false) // 侧边栏折叠状态
 const shareDialogRef = ref<InstanceType<typeof ShareDialog>>() // 分享对话框ref
 const userColor = ref<string>('#9b59b6') // 当前用户光标颜色
+
+// Yjs协同编辑(如果启用)
+const useYjs = yjsConfig.enabled
+let yjsCollaboration: ReturnType<typeof useYjsCollaboration> | null = null
 
 // 侧边栏拖动相关
 const sidebarDragPosition = ref({ y: 100 }) // 侧边栏垂直位置
@@ -277,27 +284,47 @@ const applyRemoteEditImmediate = (edit: any) => {
           const tr = state.tr
           const schema = state.schema
 
-          //   处理数组或单个节点
-          let nodes: any[]
-          if (Array.isArray(content)) {
-            nodes = content.map((nodeJSON: any) => schema.nodeFromJSON(nodeJSON))
-            console.log(`[EditorArea] 📝 解析${nodes.length}个节点:`, nodes)
+          //   检测是否为单纯的换行操作（回车键）
+          //   特征: 2个paragraph节点,openStart=1, openEnd=1
+          const isEnterKey = Array.isArray(content) &&
+            content.length === 2 &&
+            content[0].type === 'paragraph' &&
+            content[1].type === 'paragraph' &&
+            openStart === 1 &&
+            openEnd === 1
+
+          if (isEnterKey) {
+            // 换行操作：直接分割当前段落
+            console.log('[EditorArea] 🔄 检测到回车换行，使用splitBlock')
+            const resolvedPos = state.doc.resolve(from)
+
+            // 使用split而不是插入节点
+            tr.split(from, 1)  // 1表示分割深度
+            view.dispatch(tr)
+            console.log('[EditorArea] ✅ 换行完成')
           } else {
-            nodes = [schema.nodeFromJSON(content)]
-            console.log(`[EditorArea] 📝 解析1个节点:`, nodes)
+            //   处理数组或单个节点
+            let nodes: any[]
+            if (Array.isArray(content)) {
+              nodes = content.map((nodeJSON: any) => schema.nodeFromJSON(nodeJSON))
+              console.log(`[EditorArea] 📝 解析${nodes.length}个节点:`, nodes)
+            } else {
+              nodes = [schema.nodeFromJSON(content)]
+              console.log(`[EditorArea] 📝 解析1个节点:`, nodes)
+            }
+
+            //   创建Fragment和Slice - 使用正确的openStart/openEnd
+            const fragment = Fragment.from(nodes)
+            const slice = new Slice(fragment, openStart || 0, openEnd || 0)
+
+            console.log(`[EditorArea] 📝 创建Slice: size=${slice.size}, openStart=${slice.openStart}, openEnd=${slice.openEnd}`)
+
+            // 使用replace插入slice
+            tr.replace(from, from, slice)
+            view.dispatch(tr)
+
+            console.log('[EditorArea] ✅ 插入完成')
           }
-
-          //   创建Fragment和Slice
-          const fragment = Fragment.from(nodes)
-          const slice = new Slice(fragment, openStart || 0, openEnd || 0)
-
-          console.log(`[EditorArea] 📝 创建Slice: size=${slice.size}, openStart=${slice.openStart}, openEnd=${slice.openEnd}`)
-
-          // 使用replace插入slice
-          tr.replace(from, from, slice)
-          view.dispatch(tr)
-
-          console.log('[EditorArea] ✅ 插入完成')
         } else {
           console.warn('[Editor] insert 操作缺少必要参数:', edit)
         }
@@ -435,63 +462,99 @@ watch(() => socketService.currentUser.value, (user) => {
 watch(documentId, (newId, oldId) => {
   console.log('[EditorArea] documentId 变化:', { oldId, newId })
 
-  // 如果有旧文档，先离开
-  if (oldId && collaboration) {
-    console.log('[EditorArea] 离开旧文档:', oldId)
-    socketService.leaveDocument(oldId)
-  }
+  if (useYjs) {
+    // Yjs模式: 初始化或切换文档
+    if (oldId && yjsCollaboration) {
+      console.log('[Yjs] 离开旧文档:', oldId)
+      yjsCollaboration.destroyYjs()
+    }
 
-  // 如果有新文档，加入
-  if (newId) {
-    console.log('[EditorArea] 准备加入新文档:', newId)
+    if (newId && editor.value) {
+      console.log('[Yjs] 加入新文档:', newId)
+      const userInfo = {
+        id: Number(userStore.userInfo?.id) || 0,
+        username: userStore.userInfo?.name || '未知用户',
+        color: generateUserColor(Number(userStore.userInfo?.id) || 0),
+      }
 
-    // 初始化协作功能（如果还没初始化）
-    if (!collaboration) {
-      collaboration = useCollaboration({
-        documentId: newId,
+      yjsCollaboration = useYjsCollaboration(documentId, userInfo)
+      yjsCollaboration.initYjs(editor.value)
 
-        // 接收远程编辑
-        onRemoteEdit: (edit) => {
-          console.log('[Editor] 收到远程编辑:', edit)
-          applyRemoteEdit(edit)
-        },
+      // 动态添加Yjs扩展
+      if (yjsCollaboration.ydoc.value && yjsCollaboration.provider.value) {
+        const yjsExts = getYjsExtensions(
+          yjsCollaboration.ydoc.value,
+          yjsCollaboration.provider.value,
+          userInfo
+        )
+        yjsExts.forEach(ext => editor.value?.registerPlugin(ext as any))
+      }
 
-        //   接收远程光标
-        onRemoteCursor: (data) => {
-          console.log('[Editor] 远程光标:', data)
-          updateRemoteCursor(data)
-        },
+      isConnected = yjsCollaboration.isConnected
+      onlineUsers = yjsCollaboration.onlineUsers
+    }
+  } else {
+    // Socket.IO模式: 使用原有逻辑
+    // 如果有旧文档，先离开
+    if (oldId && collaboration) {
+      console.log('[EditorArea] 离开旧文档:', oldId)
+      socketService.leaveDocument(oldId)
+    }
 
-        // 接收选区变化（可选）
-        onRemoteSelection: (selection) => {
-          console.log('[Editor] 远程选区:', selection)
-        },
+    // 如果有新文档，加入
+    if (newId) {
+      console.log('[EditorArea] 准备加入新文档:', newId)
 
-        // 接收输入状态
-        onUserTyping: (typing) => {
-          if (typing.isTyping) {
-            console.log(`[Editor] ${typing.username} 正在输入...`)
-          }
-        },
+      // 初始化协作功能（如果还没初始化）
+      if (!collaboration) {
+        collaboration = useCollaboration({
+          documentId: newId,
 
-        //   接收用户离开
-        onUserLeft: (data) => {
-          console.log('[Editor] 用户离开:', data)
-          removeRemoteCursor(data.userId)
-        },
-      })
+          // 接收远程编辑
+          onRemoteEdit: (edit) => {
+            console.log('[Editor] 收到远程编辑:', edit)
+            applyRemoteEdit(edit)
+          },
 
-      onlineUsers = collaboration.onlineUsers
-      isConnected = collaboration.isConnected
-    } else {
-      // 已经初始化过，直接加入新文档
-      socketService.joinDocument(newId)
+          //   接收远程光标
+          onRemoteCursor: (data) => {
+            console.log('[Editor] 远程光标:', data)
+            updateRemoteCursor(data)
+          },
+
+          // 接收选区变化（可选）
+          onRemoteSelection: (selection) => {
+            console.log('[Editor] 远程选区:', selection)
+          },
+
+          // 接收输入状态
+          onUserTyping: (typing) => {
+            if (typing.isTyping) {
+              console.log(`[Editor] ${typing.username} 正在输入...`)
+            }
+          },
+
+          //   接收用户离开
+          onUserLeft: (data) => {
+            console.log('[Editor] 用户离开:', data)
+            removeRemoteCursor(data.userId)
+          },
+        })
+
+        onlineUsers = collaboration.onlineUsers
+        isConnected = collaboration.isConnected
+      } else {
+        // 已经初始化过，直接加入新文档
+        socketService.joinDocument(newId)
+      }
     }
   }
 }, { immediate: true })  //   immediate: true 确保首次加载时就执行
 
-// 广播编辑操作（使用 TipTap transaction 获取增量更新）
+// 广播编辑操作（仅Socket.IO模式使用）
 const broadcastEdit = (transaction: any) => {
+  if (useYjs) return // Yjs自动同步,不需要手动广播
+
   if (!collaboration || !editor.value || !documentId.value) {
     console.log('[broadcastEdit] 跳过: collaboration=', !!collaboration, 'editor=', !!editor.value, 'documentId=', documentId.value)
     return
@@ -633,7 +696,8 @@ const editor = useEditor({
         class: 'editor-image',
       },
     }),
-    CollaborationCursor, //   添加协同光标扩展
+    // 使用Yjs协同光标或传统协同光标
+    ...(useYjs ? [] : [CollaborationCursor]),
     CommentMark, // 添加评论标记扩展
   ],
   editable: true,
