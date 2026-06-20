@@ -1731,20 +1731,56 @@ onBeforeUnmount(() => {
 
 .editorContainer :deep(.ProseMirror) {
   width: 100%;
-  height: calc(100vh - 213px);
-  border: 1px black solid;
-  border-radius: 10px;
+  max-width: 800px;
+  height: 100%;
+  border: none;
   display: block;
   box-sizing: border-box;
   overflow-y: auto;
-  /* 编辑器内容可滚动 */
   overflow-x: hidden;
-  /* 隐藏横向滚动 */
-  align-items: flex-start !important;
-  justify-content: flex-start !important;
   text-align: left !important;
-  margin: 0 !important;
-  padding: 10px 5px 10px 5px !important;
+  margin: 0 auto !important;
+  padding: 40px 32px 96px 32px !important;
+  font-size: 16px;
+  line-height: 1.8;
+  color: #2b303b;
+  outline: none;
+}
+
+.editorContainer :deep(.ProseMirror:focus) {
+  outline: none;
+}
+
+/* 标题与正文排版 */
+.editorContainer :deep(.ProseMirror h1) {
+  font-size: 30px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0.2em 0 0.5em;
+  color: #15181f;
+}
+
+.editorContainer :deep(.ProseMirror h2) {
+  font-size: 23px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 1em 0 0.4em;
+  color: #15181f;
+}
+
+.editorContainer :deep(.ProseMirror h3) {
+  font-size: 19px;
+  font-weight: 600;
+  margin: 0.9em 0 0.3em;
+  color: #15181f;
+}
+
+.editorContainer :deep(.ProseMirror p) {
+  margin: 0.55em 0;
+}
+
+.editorContainer :deep(.ProseMirror > *:first-child) {
+  margin-top: 0;
 }
 
 /* 列表样式 */
@@ -1953,6 +1989,11 @@ onBeforeUnmount(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  margin: 14px 18px 18px;
 }
 
 /* 上传 Loading 遮罩层 */

@@ -320,36 +320,22 @@ const handleClearSearch = () => {
 
 <style scoped>
 .sidebarContainer {
-  background: linear-gradient(135deg, #ff7d00 0%, #ffb347 50%, #ff9500 100%);
-  background-size: 200% 200%;
-  animation: gradientShift 15s ease infinite;
-}
-
-@keyframes gradientShift {
-  0% {
-    background-position: 0% 50%;
-  }
-
-  50% {
-    background-position: 100% 50%;
-  }
-
-  100% {
-    background-position: 0% 50%;
-  }
+  background: var(--c-sidebar);
+  border-right: 1px solid var(--c-border);
 }
 
 /* ====== 文档区域样式 ====== */
 .docs-section {
-  background: rgba(255, 255, 255, 0.95);
-  border-radius: 12px;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  transition: all 0.3s ease;
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .docs-section:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--c-border-strong);
 }
 
 /* 区域标题 */
@@ -357,15 +343,14 @@ const handleClearSearch = () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 11px 14px;
   cursor: pointer;
   user-select: none;
-  transition: all 0.3s ease;
+  transition: background 0.15s ease;
 }
 
 .section-header:hover {
-  background: linear-gradient(135deg, #5568d3 0%, #6a3f91 100%);
+  background: #f4f5f8;
 }
 
 .section-header:active {
@@ -379,44 +364,41 @@ const handleClearSearch = () => {
 }
 
 .toggle-icon {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.9);
-  transition: transform 0.3s ease;
+  font-size: 10px;
+  color: var(--c-text-3);
+  transition: transform 0.2s ease;
   display: inline-block;
-  width: 16px;
+  width: 14px;
   text-align: center;
 }
 
 .section-title {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
-  color: #ffffff;
-  letter-spacing: 0.5px;
+  color: var(--c-text);
+  letter-spacing: 0.2px;
 }
 
 .count-badge {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.85);
-  background: rgba(255, 255, 255, 0.2);
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-weight: 500;
+  font-size: 11px;
+  color: var(--c-primary);
+  background: var(--c-primary-soft);
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-weight: 600;
 }
 
 /* 区域内容 */
 .section-content {
-  padding: 8px;
-  max-height: 500px;
+  padding: 6px;
+  max-height: 460px;
   overflow-y: auto;
+  border-top: 1px solid var(--c-border);
 }
 
-/* 分享文档区域特殊样式 */
-.shared-section .section-header {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-}
-
+/* 分享文档区域:与"我的文档"统一外观 */
 .shared-section .section-header:hover {
-  background: linear-gradient(135deg, #e082ea 0%, #e4465b 100%);
+  background: #f4f5f8;
 }
 
 /* ====== 加载状态 ====== */
@@ -461,9 +443,8 @@ const handleClearSearch = () => {
 }
 
 .shared-doc-item.active {
-  background: #e8f3ff;
-  border-color: #4080ff;
-  box-shadow: 0 2px 8px rgba(64, 128, 255, 0.15);
+  background: var(--c-primary-soft);
+  border-color: var(--c-primary);
 }
 
 .doc-icon {

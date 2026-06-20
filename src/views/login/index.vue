@@ -1,7 +1,7 @@
 <template>
   <div class="login-container">
     <!-- 添加动态渐变背景 -->
-    <LoginBackground :colors="['#ff595e', '#ffca3a', '#8ac926', '#1982c4']" :speed="20" :angle="135" />
+    <LoginBackground :colors="['#4338ca', '#4f46e5', '#6366f1', '#7c3aed']" :speed="24" :angle="135" />
 
     <!-- 引入登录表单组件 -->
     <LoginForm />
