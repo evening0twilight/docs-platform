@@ -33,8 +33,8 @@ export function useCollaboration(options: UseCollaborationOptions) {
    */
   const joinDocument = () => {
     if (!socketService.isConnected.value) {
-      console.warn('[useCollaboration] ⚠️ WebSocket 未连接，等待连接后加入文档')
-      // 等待连接后再加入
+      if (import.meta.env.DEV) console.warn('[useCollaboration] ⚠️ WebSocket 未连接，等待连接后加入文档')
+      // 等待连接后再加入(watcher 一并登记,卸载时统一停止,避免泄漏)
       const unwatch = watch(
         () => socketService.isConnected.value,
         (connected) => {
@@ -53,17 +53,19 @@ export function useCollaboration(options: UseCollaborationOptions) {
                   }
                 }
               )
+              unsubscribers.push(unwatchAuth)
             }
             unwatch()
           }
         }
       )
+      unsubscribers.push(unwatch)
       return
     }
 
     // 如果已连接但未认证，等待认证
     if (!socketService.isAuthenticated.value) {
-      console.warn('[useCollaboration] ⚠️ 未认证，等待认证后加入文档')
+      if (import.meta.env.DEV) console.warn('[useCollaboration] ⚠️ 未认证，等待认证后加入文档')
       const unwatchAuth = watch(
         () => socketService.isAuthenticated.value,
         (authenticated) => {
@@ -73,6 +75,7 @@ export function useCollaboration(options: UseCollaborationOptions) {
           }
         }
       )
+      unsubscribers.push(unwatchAuth)
       return
     }
 
@@ -132,7 +135,7 @@ export function useCollaboration(options: UseCollaborationOptions) {
     // 监听远程编辑
     if (onRemoteEdit) {
       const unsub = socketService.onDocumentEdit((data) => {
-        console.log('[Collaboration] 收到远程编辑:', data)
+        if (import.meta.env.DEV) console.log('[Collaboration] 收到远程编辑:', data)
         onRemoteEdit(data)
       })
       unsubscribers.push(unsub)

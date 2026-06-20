@@ -100,6 +100,7 @@ class SocketService {
   disconnect() {
     if (this.socket) {
       console.log('[Socket] 🔌 断开连接')
+      this.socket.removeAllListeners() // 移除所有监听器,避免重连后重复绑定/内存泄漏
       this.socket.disconnect()
       this.socket = null
       this.isConnected.value = false
@@ -253,8 +254,11 @@ class SocketService {
     // ====== 5. 连接错误和断开事件 ======
     this.socket.on('connect_error', (error) => {
       console.error('[Socket] ❌ 连接错误:', error.message)
-      console.error('[Socket] ❌ 错误详情:', error)
-      console.error('[Socket] ❌ 连接URL:', import.meta.env.VITE_WS_URL)
+      // 详细信息(含连接URL)仅在开发环境输出,避免生产泄露基础设施配置
+      if (import.meta.env.DEV) {
+        console.error('[Socket] ❌ 错误详情:', error)
+        console.error('[Socket] ❌ 连接URL:', import.meta.env.VITE_WS_URL)
+      }
       this.isConnected.value = false
       
       // 检查是否是认证错误
@@ -302,9 +306,9 @@ class SocketService {
     this.socket.on('reconnect', (attemptNumber) => {
       console.log(`[Socket] 重连成功 (尝试 ${attemptNumber} 次)`)
       
-      // 重新认证
+      // 重新认证(修复:此前读取了不存在的 'userInfo' key,应为 'user-store')
       const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-      const userStr = localStorage.getItem('userInfo')
+      const userStr = localStorage.getItem('user-store') || sessionStorage.getItem('user-store')
       if (token && userStr) {
         try {
           const user = JSON.parse(userStr)
@@ -352,14 +356,16 @@ class SocketService {
       })
     })
 
-    // ====== 调试: 监听所有事件 ======
-    this.socket.onAny((eventName: string, ...args: any[]) => {
-      console.log('[Socket] 📥 收到事件:', eventName, args)
-    })
+    // ====== 调试: 仅开发环境监听所有事件(生产环境会泄露 token/内容并影响性能) ======
+    if (import.meta.env.DEV) {
+      this.socket.onAny((eventName: string, ...args: any[]) => {
+        console.log('[Socket] 📥 收到事件:', eventName, args)
+      })
 
-    this.socket.onAnyOutgoing((eventName: string, ...args: any[]) => {
-      console.log('[Socket] 📤 发送事件:', eventName, args)
-    })
+      this.socket.onAnyOutgoing((eventName: string, ...args: any[]) => {
+        console.log('[Socket] 📤 发送事件:', eventName, args)
+      })
+    }
   }
 
   /**
@@ -497,25 +503,6 @@ class SocketService {
     if (!this.socket?.connected) return
     this.socket.emit('chat-message', msg)
   }
-
-  /**
-   * 更新光标颜色
-   */
-  // updateCursorColor(color: string) {
-  //   if (!this.socket?.connected) return
-  //   this.socket.emit('update-cursor-color', { color })
-    
-  //   // 更新本地currentUser的颜色
-  //   if (this.currentUser.value) {
-  //     this.currentUser.value.color = color
-  //   }
-    
-  //   // 更新onlineUsers中当前用户的颜色
-  //   const userIndex = this.onlineUsers.value.findIndex(u => u.userId === this.currentUser.value?.userId)
-  //   if (userIndex !== -1) {
-  //     this.onlineUsers.value[userIndex].color = color
-  //   }
-  // }
 
   /**
    * 监听聊天消息

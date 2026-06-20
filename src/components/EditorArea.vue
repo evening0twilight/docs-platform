@@ -1351,9 +1351,9 @@ onMounted(() => {
   window.addEventListener('manual-save-request', handleGlobalSave)
   window.addEventListener('restore-version', handleRestoreVersion as EventListener)
 
-  // 监听协同状态变化
-  socketService.onCollaborationToggle((data) => {
-    console.log('[EditorArea] 收到协同状态变化通知:', data)
+  // 监听协同状态变化(捕获注销函数,卸载时清理,避免 socket 单例上残留回调)
+  const unsubCollabToggle = socketService.onCollaborationToggle((data) => {
+    if (import.meta.env.DEV) console.log('[EditorArea] 收到协同状态变化通知:', data)
 
     // 如果是当前文档
     if (String(data.documentId) === String(documentId.value)) {
@@ -1362,8 +1362,8 @@ onMounted(() => {
   })
 
   //   监听权限更新
-  socketService.onPermissionUpdate((data) => {
-    console.log('[EditorArea] 收到权限更新通知:', data)
+  const unsubPermissionUpdate = socketService.onPermissionUpdate((data) => {
+    if (import.meta.env.DEV) console.log('[EditorArea] 收到权限更新通知:', data)
 
     // 如果是当前用户且是当前文档
     if (String(data.userId) === String(userStore.userInfo?.id) &&
@@ -1410,6 +1410,9 @@ onMounted(() => {
     window.removeEventListener('manual-save-request', handleGlobalSave)
     window.removeEventListener('restore-version', handleRestoreVersion as EventListener)
     window.removeEventListener('keydown', handleKeyDown)
+    // 注销 socket 单例上的订阅,避免组件卸载后回调残留
+    unsubCollabToggle()
+    unsubPermissionUpdate()
   })
 })
 
