@@ -15,7 +15,7 @@ export async function saveDocumentVersion(
   documentId: number,
   data: SaveVersionRequest
 ): Promise<DocumentVersion> {
-  return http.post(`/api/documents/${documentId}/versions`, data);
+  return http.post(`/documents/${documentId}/versions`, data);
 }
 
 /**
@@ -26,7 +26,7 @@ export async function getDocumentVersions(
   page: number = 1,
   pageSize: number = 20
 ): Promise<VersionListResponse> {
-  return http.get(`/api/documents/${documentId}/versions?page=${page}&pageSize=${pageSize}`);
+  return http.get(`/documents/${documentId}/versions?page=${page}&pageSize=${pageSize}`);
 }
 
 /**
@@ -36,7 +36,7 @@ export async function getVersionDetail(
   documentId: number,
   versionId: number
 ): Promise<DocumentVersionDetail> {
-  return http.get(`/api/documents/${documentId}/versions/${versionId}`);
+  return http.get(`/documents/${documentId}/versions/${versionId}`);
 }
 
 /**
@@ -46,7 +46,7 @@ export async function restoreDocumentVersion(
   documentId: number,
   data: RestoreVersionRequest
 ): Promise<DocumentVersion> {
-  return http.post(`/api/documents/${documentId}/restore`, data);
+  return http.post(`/documents/${documentId}/restore`, data);
 }
 
 /**
@@ -56,7 +56,7 @@ export async function cleanOldVersions(
   documentId: number,
   keepDays: number = 30
 ): Promise<{ deleted: number }> {
-  return http.post(`/api/documents/${documentId}/versions/clean?keepDays=${keepDays}`);
+  return http.post(`/documents/${documentId}/versions/clean?keepDays=${keepDays}`);
 }
 
 /**
@@ -67,7 +67,7 @@ export async function compareVersions(
   sourceVersionId: number,
   targetVersionId: number
 ): Promise<VersionCompareResult> {
-  return http.get(`/api/documents/${documentId}/versions/compare?sourceVersionId=${sourceVersionId}&targetVersionId=${targetVersionId}`);
+  return http.get(`/documents/${documentId}/versions/compare?sourceVersionId=${sourceVersionId}&targetVersionId=${targetVersionId}`);
 }
 
 /**
@@ -77,5 +77,5 @@ export async function deleteDocumentVersion(
   documentId: number,
   versionId: number
 ): Promise<{ message: string }> {
-  return http.delete(`/api/documents/${documentId}/versions/${versionId}`);
+  return http.delete(`/documents/${documentId}/versions/${versionId}`);
 }
