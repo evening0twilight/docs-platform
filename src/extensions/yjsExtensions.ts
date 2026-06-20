@@ -1,7 +1,7 @@
 import Collaboration from '@tiptap/extension-collaboration'
 import CollaborationCursor from '@tiptap/extension-collaboration-cursor'
 import * as Y from 'yjs'
-import type { WebsocketProvider } from 'y-websocket'
+import type { HocuspocusProvider } from '@hocuspocus/provider'
 
 interface UserInfo {
   id: number
@@ -11,10 +11,12 @@ interface UserInfo {
 
 /**
  * 获取Yjs协同编辑扩展
+ * 注意:这些扩展必须在「创建编辑器」时放入 extensions 数组,
+ *       且需关闭 StarterKit 的 history(Collaboration 自带基于 Yjs 的撤销/重做协调)。
  */
 export function getYjsExtensions(
   ydoc: Y.Doc,
-  provider: WebsocketProvider,
+  provider: HocuspocusProvider,
   userInfo: UserInfo
 ) {
   return [

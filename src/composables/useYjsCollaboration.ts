@@ -1,7 +1,7 @@
 import { ref, onBeforeUnmount } from 'vue'
 import type { Ref } from 'vue'
 import * as Y from 'yjs'
-import { WebsocketProvider } from 'y-websocket'
+import { HocuspocusProvider } from '@hocuspocus/provider'
 import type { Editor } from '@tiptap/vue-3'
 import { yjsConfig } from '@/config/yjsConfig'
 
@@ -12,14 +12,17 @@ interface UserInfo {
 }
 
 /**
- * Yjs协同编辑组合式函数
+ * Yjs/CRDT 协同编辑组合式函数
+ *
+ * 使用 @hocuspocus/provider,与后端 @hocuspocus/server(YjsModule)配套。
+ * 鉴权:通过 token 选项发送 JWT,后端 onAuthenticate 校验。
  */
 export function useYjsCollaboration(
   documentId: Ref<string | undefined>,
   userInfo: UserInfo
 ): {
   ydoc: Ref<Y.Doc | null>
-  provider: Ref<WebsocketProvider | null>
+  provider: Ref<HocuspocusProvider | null>
   isConnected: Ref<boolean>
   onlineUsers: Ref<Array<{ id: number; username: string; color: string }>>
   initYjs: (editor: Editor) => void
@@ -27,85 +30,77 @@ export function useYjsCollaboration(
   updateCursor: (position: { from: number; to: number }) => void
 } {
   const ydoc = ref<Y.Doc | null>(null)
-  const provider = ref<WebsocketProvider | null>(null)
+  const provider = ref<HocuspocusProvider | null>(null)
   const isConnected = ref(false)
   const onlineUsers = ref<Array<{ id: number; username: string; color: string }>>([])
-  // 保存监听器引用,便于销毁时精确移除,避免切换文档时回调残留(内存泄漏)
-  let statusHandler: ((event: { status: string }) => void) | undefined
+
   let awarenessChangeHandler: (() => void) | undefined
 
   /**
-   * 初始化Yjs文档和WebSocket提供者
+   * 初始化 Yjs 文档与 Hocuspocus 连接
+   * 注意:Collaboration 扩展需在编辑器创建时传入,这里返回的 ydoc/provider
+   *       供 getYjsExtensions() 在「创建编辑器」时使用(见 EditorArea)。
    */
-  function initYjs(editor: Editor) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  function initYjs(_editor?: Editor) {
     if (!documentId.value) return
 
     console.log('[Yjs] 初始化协同编辑:', documentId.value)
 
-    // 创建Yjs文档
     ydoc.value = new Y.Doc()
-    
-    // 创建WebSocket提供者
-    provider.value = new WebsocketProvider(
-      yjsConfig.wsUrl,
-      `document-${documentId.value}`,
-      ydoc.value,
-      {
-        params: {
-          userId: userInfo.id.toString(),
-          username: userInfo.username,
-        },
-        connect: true,
-        // 连接超时配置
-        resyncInterval: yjsConfig.reconnectInterval,
-      }
-    )
 
-    // 监听连接状态
-    statusHandler = (event: { status: string }) => {
-      console.log('[Yjs] WebSocket状态:', event.status)
-      isConnected.value = event.status === 'connected'
-    }
-    provider.value.on('status', statusHandler)
-
-    // 监听在线用户变化
-    awarenessChangeHandler = () => {
-      const states = Array.from(provider.value!.awareness.getStates().entries())
-      onlineUsers.value = states
-        .filter(([clientId, state]: [number, any]) => clientId !== provider.value!.awareness.clientID)
-        .map(([clientId, state]: [number, any]) => ({
-          id: state.user?.id || clientId,
-          username: state.user?.name || '未知用户',
-          color: state.user?.color || '#000000',
-        }))
-
-      console.log('[Yjs] 在线用户数:', onlineUsers.value.length + 1)
-    }
-    provider.value.awareness.on('change', awarenessChangeHandler)
-
-    // 设置当前用户信息
-    provider.value.awareness.setLocalStateField('user', {
-      id: userInfo.id,
-      name: userInfo.username,
-      color: userInfo.color,
+    provider.value = new HocuspocusProvider({
+      url: yjsConfig.wsUrl,
+      name: `document-${documentId.value}`,
+      document: ydoc.value,
+      // 发送 JWT 给后端 onAuthenticate;函数形式以便每次重连读取最新 token
+      token: () =>
+        localStorage.getItem('token') || sessionStorage.getItem('token') || '',
+      onStatus: ({ status }: { status: string }) => {
+        console.log('[Yjs] 连接状态:', status)
+        isConnected.value = status === 'connected'
+      },
+      onAuthenticationFailed: ({ reason }: { reason: string }) => {
+        console.error('[Yjs] 鉴权失败:', reason)
+        isConnected.value = false
+      },
     })
+
+    // 设置本地用户(供协同光标显示)
+    const awareness = provider.value.awareness
+    if (awareness) {
+      awareness.setLocalStateField('user', {
+        id: userInfo.id,
+        name: userInfo.username,
+        color: userInfo.color,
+      })
+
+      // 监听在线用户变化
+      awarenessChangeHandler = () => {
+        const states = Array.from(awareness.getStates().entries())
+        onlineUsers.value = states
+          .filter(([clientId]) => clientId !== awareness.clientID)
+          .map(([clientId, state]: [number, any]) => ({
+            id: state.user?.id || clientId,
+            username: state.user?.name || '未知用户',
+            color: state.user?.color || '#000000',
+          }))
+      }
+      awareness.on('change', awarenessChangeHandler)
+    }
 
     console.log('[Yjs] 协同编辑初始化完成')
   }
 
   /**
-   * 销毁Yjs连接
+   * 销毁 Yjs 连接
    */
   function destroyYjs() {
     if (provider.value) {
       console.log('[Yjs] 断开连接')
-      // 先移除我们注册的监听器,再销毁 provider
-      if (statusHandler) {
-        provider.value.off('status', statusHandler)
-        statusHandler = undefined
-      }
-      if (awarenessChangeHandler) {
-        provider.value.awareness.off('change', awarenessChangeHandler)
+      const awareness = provider.value.awareness
+      if (awareness && awarenessChangeHandler) {
+        awareness.off('change', awarenessChangeHandler)
         awarenessChangeHandler = undefined
       }
       provider.value.destroy()
@@ -122,17 +117,15 @@ export function useYjsCollaboration(
   }
 
   /**
-   * 更新光标位置
+   * 更新本地光标位置(Yjs 模式下通常由 CollaborationCursor 扩展自动处理,此处保留作兜底)
    */
   function updateCursor(position: { from: number; to: number }) {
-    if (provider.value?.awareness) {
-      provider.value.awareness.setLocalStateField('cursor', position)
+    const awareness = provider.value?.awareness
+    if (awareness) {
+      awareness.setLocalStateField('cursor', position)
     }
   }
 
-  /**
-   * 组件卸载时清理
-   */
   onBeforeUnmount(() => {
     destroyYjs()
   })
