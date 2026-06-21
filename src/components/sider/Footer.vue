@@ -1,7 +1,7 @@
 <template>
   <div class="footer-container w-full h-full flex items-center justify-end gap-[16px] px-[20px]">
-    <button 
-      class="bg-blue-500 hover:bg-blue-600 disabled:bg-gray-400 text-white py-2 px-4 rounded transition-colors duration-200 flex items-center gap-2"
+    <button
+      class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white text-sm font-medium py-2 px-5 rounded-lg shadow-sm transition-colors duration-200 flex items-center gap-2"
       :disabled="!hasUnsavedChanges || saving"
       @click="handleSave"
     >

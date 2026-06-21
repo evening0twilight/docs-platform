@@ -1435,7 +1435,7 @@ onBeforeUnmount(() => {
 .toolbar-container {
   display: flex;
   align-items: center;
-  border-bottom: 2px solid #dcdfe6;
+  border-bottom: 1px solid var(--c-border);
   background: #fff;
   /* height: 50px; */
   min-height: 50px;
@@ -1468,8 +1468,8 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   padding: 0 12px;
-  border-left: 1px solid #dcdfe6;
-  border-right: 1px solid #dcdfe6;
+  border-left: 1px solid var(--c-border);
+  border-right: 1px solid var(--c-border);
 }
 
 /* 右侧操作区域 - 固定位置 */
