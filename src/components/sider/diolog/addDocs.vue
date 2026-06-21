@@ -327,7 +327,7 @@ defineExpose({
 }
 
 .addDocsContainer :deep(.arco-modal-header) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   color: white;
   padding: 20px 24px;
   border-bottom: none;
@@ -354,12 +354,12 @@ defineExpose({
 }
 
 .addDocsContainer :deep(.arco-input:hover) {
-  border-color: #667eea;
+  border-color: #4f46e5;
 }
 
 .addDocsContainer :deep(.arco-input:focus) {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
 .addDocsContainer :deep(.arco-tree-select) {
@@ -373,12 +373,12 @@ defineExpose({
 }
 
 .addDocsContainer :deep(.arco-select-view:hover) {
-  border-color: #667eea;
+  border-color: #4f46e5;
 }
 
 .addDocsContainer :deep(.arco-select-focused .arco-select-view) {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
 .addDocsContainer :deep(.arco-tree-node-title) {
@@ -391,7 +391,7 @@ defineExpose({
 }
 
 .addDocsContainer :deep(.arco-tree-node-selected .arco-tree-node-title) {
-  background-color: rgba(102, 126, 234, 0.1);
+  background-color: rgba(79, 70, 229, 0.1);
 }
 
 .addDocsContainer :deep(.arco-tree-node-title:hover) {
@@ -404,7 +404,7 @@ defineExpose({
 }
 
 .addDocsContainer :deep(.arco-btn-primary) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   border: none;
   border-radius: 8px;
   font-weight: 500;
@@ -412,9 +412,9 @@ defineExpose({
 }
 
 .addDocsContainer :deep(.arco-btn-primary:hover:not(:disabled)) {
-  background: linear-gradient(135deg, #5568d3 0%, #653993 100%);
+  background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
 }
 
 .addDocsContainer :deep(.arco-btn-primary:disabled) {

@@ -112,7 +112,7 @@ defineExpose({
 }
 
 .rename-dialog :deep(.arco-modal-header) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   color: white;
   padding: 20px 24px;
   border-bottom: none;
@@ -179,12 +179,12 @@ defineExpose({
 }
 
 .rename-dialog :deep(.arco-input:hover) {
-  border-color: #667eea;
+  border-color: #4f46e5;
 }
 
 .rename-dialog :deep(.arco-input:focus) {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
 .rename-dialog :deep(.arco-modal-footer) {
@@ -193,13 +193,13 @@ defineExpose({
 }
 
 .rename-dialog :deep(.arco-btn-primary) {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   border: none;
   border-radius: 8px;
   font-weight: 500;
 }
 
 .rename-dialog :deep(.arco-btn-primary:hover) {
-  background: linear-gradient(135deg, #5568d3 0%, #65408b 100%);
+  background: linear-gradient(135deg, #4338ca 0%, #4f46e5 100%);
 }
 </style>

@@ -358,7 +358,7 @@ defineExpose({
   gap: 12px;
   font-size: 20px;
   font-weight: 600;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -399,14 +399,14 @@ defineExpose({
 
 .user-avatar {
   border: 4px solid #fff;
-  box-shadow: 0 8px 24px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 8px 24px rgba(79, 70, 229, 0.3);
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .user-avatar:hover {
   transform: scale(1.05);
-  box-shadow: 0 12px 32px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 12px 32px rgba(79, 70, 229, 0.4);
 }
 
 /* 上传中遮罩 */
@@ -429,7 +429,7 @@ defineExpose({
   width: 30px;
   height: 30px;
   border: 3px solid #f3f3f3;
-  border-top: 3px solid #667eea;
+  border-top: 3px solid #4f46e5;
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -447,7 +447,7 @@ defineExpose({
 .upload-text {
   margin-top: 8px;
   font-size: 12px;
-  color: #667eea;
+  color: #4f46e5;
   font-weight: 500;
 }
 
@@ -467,7 +467,7 @@ defineExpose({
   right: 0;
   width: 28px;
   height: 28px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -524,7 +524,7 @@ defineExpose({
 
 .edit-btn {
   padding: 6px 16px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
   color: white;
   border: none;
   border-radius: 6px;
@@ -536,7 +536,7 @@ defineExpose({
 
 .edit-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
 }
 
 /* 显示内容 */
@@ -566,12 +566,12 @@ defineExpose({
 }
 
 .custom-input :deep(.arco-input-wrapper:hover) {
-  border-color: #667eea;
+  border-color: #4f46e5;
 }
 
 .custom-input :deep(.arco-input-wrapper.arco-input-focus) {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
 .edit-actions {
@@ -600,13 +600,13 @@ defineExpose({
 }
 
 .action-btn.save {
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
   color: white;
 }
 
 .action-btn.save:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
 }
 
 /* 分割线 */
@@ -624,7 +624,7 @@ defineExpose({
 .password-btn {
   width: 100%;
   padding: 14px 20px;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.08), rgba(118, 75, 162, 0.08));
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.08), rgba(99, 102, 241, 0.08));
   border: 2px solid transparent;
   border-radius: 10px;
   display: flex;
@@ -652,8 +652,8 @@ defineExpose({
 }
 
 .password-btn:hover {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15));
-  border-color: #667eea;
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.15), rgba(99, 102, 241, 0.15));
+  border-color: #4f46e5;
   transform: translateX(4px);
 }
 
@@ -665,7 +665,7 @@ defineExpose({
   flex: 1;
   font-size: 15px;
   font-weight: 600;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -675,7 +675,7 @@ defineExpose({
 .btn-arrow {
   font-size: 18px;
   font-weight: bold;
-  color: #667eea;
+  color: #4f46e5;
   opacity: 0;
   transform: translateX(-10px);
   transition: all 0.3s ease;
@@ -696,7 +696,7 @@ defineExpose({
 
 .close-btn {
   padding: 10px 32px;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
   color: white;
   border: none;
   border-radius: 8px;
@@ -708,7 +708,7 @@ defineExpose({
 
 .close-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
 }
 
 /* 全局模态框样式 */
@@ -720,7 +720,7 @@ defineExpose({
 :deep(.arco-modal-header) {
   padding: 24px 24px 16px !important;
   border-bottom: none !important;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.05), rgba(99, 102, 241, 0.05));
 }
 
 :deep(.arco-modal-body) {

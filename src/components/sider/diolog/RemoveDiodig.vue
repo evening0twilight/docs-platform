@@ -300,13 +300,13 @@ defineExpose({
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
   border-radius: 8px;
 }
 
 .item-icon {
   font-size: 20px;
-  color: #f5576c;
+  color: #dc2626;
 }
 
 .item-icon.folder {
@@ -328,7 +328,7 @@ defineExpose({
   padding: 10px 14px;
   background: #f2f3f5;
   border-radius: 6px;
-  border-left: 3px solid #f5576c;
+  border-left: 3px solid #dc2626;
 }
 
 .tip-text {
@@ -350,7 +350,7 @@ defineExpose({
 }
 
 .move-dialog-container :deep(.arco-modal-header) {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   color: white;
   padding: 20px 24px;
   border-bottom: none;
@@ -381,11 +381,11 @@ defineExpose({
 }
 
 .move-dialog-container :deep(.arco-select-view:hover) {
-  border-color: #f5576c;
+  border-color: #dc2626;
 }
 
 .move-dialog-container :deep(.arco-select-focused .arco-select-view) {
-  border-color: #f5576c;
+  border-color: #dc2626;
   box-shadow: 0 0 0 3px rgba(245, 87, 108, 0.1);
 }
 
@@ -412,7 +412,7 @@ defineExpose({
 }
 
 .move-dialog-container :deep(.arco-btn-primary) {
-  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
   border: none;
   border-radius: 8px;
   font-weight: 500;
@@ -420,7 +420,7 @@ defineExpose({
 }
 
 .move-dialog-container :deep(.arco-btn-primary:hover:not(:disabled)) {
-  background: linear-gradient(135deg, #e082ea 0%, #e4465b 100%);
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(245, 87, 108, 0.3);
 }

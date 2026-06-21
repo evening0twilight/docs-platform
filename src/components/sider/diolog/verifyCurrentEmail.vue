@@ -322,7 +322,7 @@ defineExpose({
   display: flex;
   gap: 12px;
   padding: 16px;
-  background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
   border-radius: 12px;
   border-left: 4px solid #2196f3;
 }
@@ -440,7 +440,7 @@ defineExpose({
   flex-shrink: 0;
   padding: 0 20px;
   height: 40px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   color: white;
   border: none;
   border-radius: 8px;
@@ -452,7 +452,7 @@ defineExpose({
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
   }
 
   &:disabled {
@@ -536,12 +536,12 @@ defineExpose({
 }
 
 .confirm-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   color: white;
 
   &:hover:not(:disabled) {
     transform: translateY(-2px);
-    box-shadow: 0 8px 16px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
   }
 
   &:disabled {

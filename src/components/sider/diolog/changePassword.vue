@@ -218,7 +218,7 @@ defineExpose({
   gap: 12px;
   font-size: 20px;
   font-weight: 600;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -286,14 +286,14 @@ defineExpose({
 }
 
 .custom-input :deep(.arco-input-wrapper:hover) {
-  border-color: #667eea;
+  border-color: #4f46e5;
   background: #fff;
 }
 
 .custom-input :deep(.arco-input-wrapper.arco-input-focus) {
-  border-color: #667eea;
+  border-color: #4f46e5;
   background: #fff;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
 /* 密码强度指示器 */
@@ -384,14 +384,14 @@ defineExpose({
 }
 
 .confirm-btn {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   color: white;
   min-width: 120px;
 }
 
 .confirm-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.4);
 }
 
 .confirm-btn:disabled {
@@ -423,7 +423,7 @@ defineExpose({
 :deep(.arco-modal-header) {
   padding: 24px 24px 16px !important;
   border-bottom: none !important;
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.05), rgba(99, 102, 241, 0.05));
 }
 
 :deep(.arco-modal-body) {

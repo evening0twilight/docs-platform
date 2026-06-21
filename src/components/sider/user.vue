@@ -101,10 +101,10 @@ const handleLogout = () => {
 <style scoped>
 .user-popover-container {
   width: 320px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
   border-radius: 16px;
   padding: 20px;
-  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 32px rgba(79, 70, 229, 0.4);
   position: relative;
   overflow: hidden;
 }
@@ -153,7 +153,7 @@ const handleLogout = () => {
 
 .user-avatar {
   border: 3px solid #fff;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  box-shadow: 0 4px 12px rgba(79, 70, 229, 0.3);
 }
 
 .avatar-ring {
@@ -164,7 +164,7 @@ const handleLogout = () => {
   bottom: -4px;
   border-radius: 50%;
   border: 2px solid transparent;
-  background: linear-gradient(135deg, #667eea, #764ba2) border-box;
+  background: linear-gradient(135deg, #4f46e5, #6366f1) border-box;
   mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
   -webkit-mask: linear-gradient(#fff 0 0) padding-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
@@ -195,7 +195,7 @@ const handleLogout = () => {
   font-weight: 600;
   color: #1d2129;
   margin: 0 0 6px 0;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -260,7 +260,7 @@ const handleLogout = () => {
 }
 
 .info-button:hover {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+  background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(99, 102, 241, 0.1));
 }
 
 .logout-button:hover {
@@ -302,7 +302,7 @@ const handleLogout = () => {
 }
 
 .info-button:hover .button-arrow {
-  color: #667eea;
+  color: #4f46e5;
 }
 
 .logout-button:hover .button-arrow {
