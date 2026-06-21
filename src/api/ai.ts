@@ -39,7 +39,8 @@ export interface AIStreamChunk {
  * 发送AI聊天请求(非流式)
  */
 export async function sendAIChat(data: AIChatRequest): Promise<AIResponse> {
-  return http.post('/api/ai/chat', data);
+  // request 实例 baseURL 已含 /api,故此处只写 /ai/*
+  return http.post('/ai/chat', data);
 }
 
 /**
@@ -49,93 +50,72 @@ export async function quickAction(
   action: AIQuickActionRequest['action'],
   text: string
 ): Promise<AIResponse> {
-  return http.post('/api/ai/quick-action', {
+  return http.post('/ai/quick-action', {
     action,
     text,
   });
 }
 
-/**
- * 创建SSE流式连接
- */
-export function createAIChatStream(data: AIChatRequest): EventSource {
-  // 构建查询参数
-  const params = new URLSearchParams({
-    message: data.message,
-    context: JSON.stringify(data.context || {}),
-  });
-
-  // 获取token
-  const token = localStorage.getItem('access_token');
-
-  // 创建EventSource连接
-  const url = `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/ai/chat-stream?${params.toString()}`;
-
-  const eventSource = new EventSource(url, {
-    // 注意: EventSource不支持自定义headers,需要通过查询参数传token或使用其他方案
-    // 这里使用fetch + ReadableStream的方式代替
-  } as any);
-
-  return eventSource;
-}
+// 流式接口的完整地址:复用 VITE_API_BASE_URL(形如 http://localhost:3000/api)
+const AI_BASE = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '');
 
 /**
- * 使用Fetch实现流式请求(推荐方式)
+ * 使用 Fetch + ReadableStream 实现流式请求(SSE)
  */
 export async function* streamAIChat(
   data: AIChatRequest
 ): AsyncGenerator<string, void, unknown> {
-  const token = localStorage.getItem('access_token');
+  // 与全站一致使用 'token'(此前误用 'access_token' 会导致鉴权失败)
+  const token =
+    localStorage.getItem('token') || sessionStorage.getItem('token') || '';
 
-  const response = await fetch(
-    `${import.meta.env.VITE_API_URL || 'http://localhost:3000'}/api/ai/chat-stream`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
-    }
-  );
+  const response = await fetch(`${AI_BASE}/ai/chat-stream`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(data),
+  });
 
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`);
+    throw new Error(`AI 流式请求失败: HTTP ${response.status}`);
   }
 
   const reader = response.body?.getReader();
   if (!reader) {
-    throw new Error('Response body is not readable');
+    throw new Error('响应体不可读(ReadableStream 不可用)');
   }
 
   const decoder = new TextDecoder();
+  // 缓冲区:SSE 数据块可能在任意字节处被切分,必须按行边界累积解析
+  let buffer = '';
 
   try {
     while (true) {
       const { done, value } = await reader.read();
-
       if (done) break;
 
-      // 解码数据块
-      const chunk = decoder.decode(value, { stream: true });
+      buffer += decoder.decode(value, { stream: true });
 
-      // 处理SSE格式的数据
-      const lines = chunk.split('\n');
+      // 仅处理已完整成行的部分,残余留在 buffer 等待下次拼接
+      const lines = buffer.split('\n');
+      buffer = lines.pop() ?? '';
+
       for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const data = line.slice(6); // 移除 "data: " 前缀
-          try {
-            const parsed = JSON.parse(data) as AIStreamChunk;
-            if (parsed.done) {
-              return;
-            }
-            if (parsed.chunk) {
-              yield parsed.chunk;
-            }
-          } catch (e) {
-            // 忽略解析错误
-            console.warn('Failed to parse SSE data:', data);
-          }
+        const trimmed = line.trimEnd();
+        if (!trimmed.startsWith('data:')) continue;
+        const payload = trimmed.slice(5).trimStart(); // 去掉 "data:" 前缀
+        if (!payload || payload === '[DONE]') {
+          if (payload === '[DONE]') return;
+          continue;
+        }
+        try {
+          const parsed = JSON.parse(payload) as AIStreamChunk;
+          if (parsed.done) return;
+          if (parsed.chunk) yield parsed.chunk;
+        } catch {
+          // 非 JSON 的心跳/注释行,忽略
         }
       }
     }

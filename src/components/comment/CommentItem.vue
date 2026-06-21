@@ -66,8 +66,8 @@
 
     <!-- 回复输入框 -->
     <div v-if="showReplyInput" class="reply-input">
-      <a-textarea v-model="replyContent" placeholder="输入回复..." :auto-size="{ minRows: 2, maxRows: 4 }" :max-length="500"
-        show-word-limit />
+      <a-textarea v-model="replyContent" placeholder="输入回复... (Ctrl+Enter 发送)"
+        :auto-size="{ minRows: 2, maxRows: 4 }" :max-length="500" show-word-limit @keydown="handleReplyKeydown" />
       <div class="reply-actions">
         <a-button size="small" @click="showReplyInput = false">取消</a-button>
         <a-button type="primary" size="small" @click="handleReply" :loading="replying" :disabled="!replyContent.trim()">
@@ -154,6 +154,16 @@ const handleReply = async () => {
     showReplyInput.value = false
   } finally {
     replying.value = false
+  }
+}
+
+// Ctrl/Cmd+Enter 发送回复
+const handleReplyKeydown = (e: KeyboardEvent) => {
+  if (e.key !== 'Enter') return
+  if (e.isComposing || (e as any).keyCode === 229) return
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault()
+    handleReply()
   }
 }
 </script>

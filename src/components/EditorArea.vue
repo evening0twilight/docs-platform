@@ -22,12 +22,12 @@
           </div>
 
           <!-- 在线用户简要信息 -->
-          <div v-if="collaboration" class="online-status">
-            <span :class="['status-dot', collaboration.isConnected.value ? 'connected' : 'disconnected']"></span>
+          <div v-if="useYjs || collaboration" class="online-status">
+            <span :class="['status-dot', collabIsConnected ? 'connected' : 'disconnected']"></span>
             <span class="status-text">
               {{
-                collaboration.isConnected.value
-                  ? (collaboration.onlineUsers.value.length === 1 ? '在线' : `${collaboration.onlineUsers.value.length} 人在线`)
+                collabIsConnected
+                  ? (collabOnlineTotal <= 1 ? '在线' : `${collabOnlineTotal} 人在线`)
                   : '离线'
               }}
             </span>
@@ -45,7 +45,7 @@
           <!-- 中间:模式切换器 -->
           <div class="toolbar-mode">
             <ModeSwitcher :current-mode="editorModeStore.currentMode" :features="editorModeStore.documentFeatures"
-              :online-users-count="collaboration?.onlineUsers.value.length || 0" :unread-comments-count="0"
+              :online-users-count="collabUsers.length" :unread-comments-count="0"
               :is-document-owner="editorModeStore.permissions.isDocumentOwner" @switch-mode="handleModeSwitch"
               @enable-collaboration="handleEnableCollaboration" @disable-collaboration="handleDisableCollaboration"
               @close-all="handleCloseAll" @manual-save="handleManualSaveClick" />
@@ -97,7 +97,7 @@
 
         <!-- 协作用户 - 浮动在编辑器上方 -->
         <CollaborationUsers v-else-if="editorModeStore.currentMode === EditorMode.COLLABORATION"
-          :users="collaboration?.onlineUsers.value || []" :is-connected="collaboration?.isConnected.value || false"
+          :users="collabUsers" :is-connected="collabIsConnected"
           :current-user-id="String(userStore.userInfo?.id || '')"
           :owner-id="String(documentData?.creatorId || documentData?.userId || '')" :document-id="documentId"
           :collaboration-enabled="documentData?.isCollaborationEnabled ?? false"
@@ -449,6 +449,24 @@ const removeRemoteCursor = (userId: string) => {
 let collaboration: ReturnType<typeof useCollaboration> | null = null
 let onlineUsers = ref([])
 let isConnected = ref(false)
+
+// 统一的"协作连接/在线用户"数据源:Yjs 模式取 awareness,否则取 Socket.IO。
+// (此前模板直接读 collaboration?.xxx,在 Yjs 模式下 collaboration 为 null 导致面板恒空)
+const collabIsConnected = computed(() =>
+  useYjs
+    ? (yjsCollaboration?.isConnected.value ?? false)
+    : (collaboration?.isConnected.value ?? false)
+)
+const collabUsers = computed<any[]>(() =>
+  useYjs
+    ? (yjsCollaboration?.onlineUsers.value ?? [])
+    : (collaboration?.onlineUsers.value ?? [])
+)
+// 在线总人数:Yjs 的 onlineUsers 已排除自身,需 +1(自己)才是总人数
+const collabOnlineTotal = computed(() => {
+  if (!collabIsConnected.value) return 0
+  return useYjs ? collabUsers.value.length + 1 : collabUsers.value.length
+})
 
 // 监听socket认证成功,获取用户颜色
 watch(() => socketService.currentUser.value, (user) => {

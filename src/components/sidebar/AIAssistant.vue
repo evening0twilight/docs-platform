@@ -56,8 +56,8 @@
 
       <!-- 输入区 -->
       <div class="input-area">
-        <a-textarea v-model="inputText" placeholder="向 AI 提问... (Ctrl+Enter 发送)" :auto-size="{ minRows: 2, maxRows: 4 }"
-          :disabled="isLoading" @keydown="handleKeydown" />
+        <a-textarea v-model="inputText" placeholder="向 AI 提问... (Enter 发送 / Shift+Enter 换行)"
+          :auto-size="{ minRows: 2, maxRows: 4 }" :disabled="isLoading" @keydown="handleKeydown" />
         <div class="input-actions">
           <a-button-group>
             <a-button size="small" :disabled="isLoading" @click="useStreamMode = !useStreamMode"
@@ -130,12 +130,14 @@ function handleClearChat() {
   clearChat();
 }
 
-// 键盘快捷键
+// 键盘快捷键:Enter 发送,Shift+Enter 换行(兼容 Ctrl/Cmd+Enter)
 function handleKeydown(e: KeyboardEvent) {
-  if (e.ctrlKey && e.key === 'Enter') {
-    e.preventDefault();
-    handleSend();
-  }
+  if (e.key !== 'Enter') return;
+  // 输入法组合输入(中文等)进行中时不触发发送
+  if (e.isComposing || (e as any).keyCode === 229) return;
+  if (e.shiftKey) return; // Shift+Enter 保留换行
+  e.preventDefault();
+  handleSend();
 }
 
 // 格式化消息内容(简单的换行处理,并过滤AI_COMMAND标记)
@@ -223,7 +225,7 @@ watch(
 
 .message-item {
   display: flex;
-  color: black;
+  color: var(--color-text-1);
   gap: 12px;
   animation: slideIn 0.3s ease;
 }

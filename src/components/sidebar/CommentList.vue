@@ -16,8 +16,9 @@
         <a-alert type="info" banner closable>
           已选中: "{{ truncatedSelection }}"
         </a-alert>
-        <a-textarea v-model="newCommentContent" placeholder="添加评论..." :auto-size="{ minRows: 3, maxRows: 6 }"
-          :max-length="500" show-word-limit style="margin-top: 12px" />
+        <a-textarea v-model="newCommentContent" placeholder="添加评论... (Ctrl+Enter 发表)"
+          :auto-size="{ minRows: 3, maxRows: 6 }" :max-length="500" show-word-limit style="margin-top: 12px"
+          @keydown="handleCommentKeydown" />
         <div class="comment-actions">
           <a-button size="small" @click="handleCancelComment">取消</a-button>
           <a-button type="primary" size="small" @click="handleCreateComment" :loading="creating"
@@ -62,7 +63,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onBeforeUnmount } from 'vue'
 import { Message } from '@arco-design/web-vue'
 import { IconMessage } from '@arco-design/web-vue/es/icon'
 import { useUserStore } from '@/store/user'
@@ -174,19 +175,35 @@ const loadComments = async () => {
   }
 }
 
-// 监听编辑器选择变化
+// 监听编辑器选择变化(保存 handler 与所绑定的 editor,便于精确解绑,避免泄漏/重复注册)
+let selectionHandler: ((payload: any) => void) | null = null
+let boundEditor: any = null
+
+const teardownSelectionListener = () => {
+  if (boundEditor && selectionHandler) {
+    boundEditor.off('selectionUpdate', selectionHandler)
+  }
+  selectionHandler = null
+  boundEditor = null
+}
+
 const setupSelectionListener = () => {
   if (!props.editor) return
+  // 已绑定到同一个 editor 则跳过,防止 watch(immediate) 与 onMounted 重复注册
+  if (boundEditor === props.editor && selectionHandler) return
+  // 切换 editor 时先解绑旧的
+  teardownSelectionListener()
 
-  props.editor.on('selectionUpdate', ({ editor }: any) => {
+  selectionHandler = ({ editor }: any) => {
     const { from, to, empty } = editor.state.selection
-
     if (!empty && to - from > 0) {
       hasSelection.value = true
       selectedText.value = editor.state.doc.textBetween(from, to)
       selectionRange.value = { from, to }
     }
-  })
+  }
+  boundEditor = props.editor
+  props.editor.on('selectionUpdate', selectionHandler)
 }
 
 // 创建评论
@@ -258,6 +275,16 @@ const handleCreateComment = async () => {
     Message.error(errorMsg)
   } finally {
     creating.value = false
+  }
+}
+
+// Ctrl/Cmd+Enter 发表评论
+const handleCommentKeydown = (e: KeyboardEvent) => {
+  if (e.key !== 'Enter') return
+  if (e.isComposing || (e as any).keyCode === 229) return
+  if (e.ctrlKey || e.metaKey) {
+    e.preventDefault()
+    handleCreateComment()
   }
 }
 
@@ -381,6 +408,10 @@ onMounted(() => {
   if (props.editor) {
     setupSelectionListener()
   }
+})
+
+onBeforeUnmount(() => {
+  teardownSelectionListener()
 })
 </script>
 
