@@ -681,8 +681,9 @@ const editor = useEditor({
       heading: {
         levels: [1, 2, 3, 4, 5, 6],
       },
-      // Yjs 模式下关闭内置 history(改用基于 Yjs 的撤销/重做协调)
-      history: useYjs ? false : undefined,
+      // Yjs 模式下关闭内置撤销/重做(Tiptap v3 中该选项为 undoRedo,旧名 history 会被忽略),
+      // 改用基于 Yjs/Collaboration 的撤销重做协调,避免两套 history 冲突。
+      undoRedo: useYjs ? false : undefined,
     }),
     Underline, // StarterKit不包含Underline,需要单独添加
     Highlight.configure({

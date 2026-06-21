@@ -25,7 +25,7 @@ export function useYjsCollaboration(
   provider: Ref<HocuspocusProvider | null>
   isConnected: Ref<boolean>
   onlineUsers: Ref<Array<{ id: number; username: string; color: string }>>
-  initYjs: (editor: Editor) => void
+  initYjs: (editor?: Editor) => void
   destroyYjs: () => void
   updateCursor: (position: { from: number; to: number }) => void
 } {

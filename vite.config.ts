@@ -10,19 +10,11 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src')
     },
-    // 确保 yjs / y-prosemirror 等只解析到唯一一份物理副本,
-    // 否则 Collaboration 与 CollaborationCursor 会拿到不同的 ySyncPluginKey,
-    // 导致协同光标插件初始化时读取 sync 状态为 undefined（reading 'doc' 崩溃）。
-    dedupe: [
-      'yjs',
-      'y-prosemirror',
-      'y-protocols',
-      '@tiptap/y-tiptap',
-      'prosemirror-state',
-      'prosemirror-view',
-      'prosemirror-model',
-      'prosemirror-transform',
-    ],
+    // 只对「项目直接依赖」的 yjs 全家桶去重,确保运行时唯一一份 yjs 实例
+    // (避免 Collaboration/Caret 拿到不同的 ySyncPluginKey 而崩溃)。
+    // 注:prosemirror-*/@tiptap/y-tiptap 是传递依赖,pnpm 严格布局下无法从项目根解析,
+    // 列入 dedupe 会让生产构建(Rollup)解析失败;它们经 @tiptap/pm 已是单实例,无需去重。
+    dedupe: ['yjs', 'y-prosemirror', 'y-protocols'],
   },
   optimizeDeps: {
     // 把 yjs 协同相关入口放进同一次预打包,配合上面的 dedupe,

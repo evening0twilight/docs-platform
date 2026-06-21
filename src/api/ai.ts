@@ -106,9 +106,10 @@ export async function* streamAIChat(
       buffer = lines.pop() ?? '';
 
       for (const line of lines) {
-        const trimmed = line.trimEnd();
+        // 用正则去尾/去首空白(避免依赖 es2019 的 trimEnd/trimStart,兼容更低 lib 目标)
+        const trimmed = line.replace(/\s+$/, '');
         if (!trimmed.startsWith('data:')) continue;
-        const payload = trimmed.slice(5).trimStart(); // 去掉 "data:" 前缀
+        const payload = trimmed.slice(5).replace(/^\s+/, ''); // 去掉 "data:" 前缀
         if (!payload || payload === '[DONE]') {
           if (payload === '[DONE]') return;
           continue;
