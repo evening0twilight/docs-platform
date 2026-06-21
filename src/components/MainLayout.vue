@@ -1,11 +1,15 @@
 <template>
-  <div class="layoutContainer w-full h-full p-[20px] rounded-xl overflow-hidden">
+  <div class="layoutContainer w-full h-full p-[20px] rounded-xl overflow-hidden"
+    :class="{ 'mobile-sidebar-open': sidebarOpen }">
+    <!-- 移动端侧栏遮罩 -->
+    <div class="sidebar-backdrop" @click="sidebarOpen = false"></div>
     <a-layout class="layout-demo">
-      <a-layout-sider collapsible breakpoint="xl" hide-trigger :width="300" class="h-full">
+      <a-layout-sider :width="300" class="h-full app-sider">
         <Sidebar class="w-full h-full" @document-click="handleDocumentClick" />
       </a-layout-sider>
       <a-layout class="w-full h-full">
-        <a-layout-header style="padding-left: 20px" class="h-[36px] w-full">
+        <a-layout-header class="h-[36px] w-full app-header">
+          <button class="mobile-menu-btn" @click="sidebarOpen = !sidebarOpen" title="菜单">☰</button>
           <TabBar />
         </a-layout-header>
         <a-layout class="h-full w-full content-layout">
@@ -32,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, computed, ref, watch } from 'vue'
+import { onMounted, onUnmounted, computed, ref, watch } from 'vue'
 import { Message } from '@arco-design/web-vue';
 import { useRouter, useRoute } from 'vue-router'
 import { useTabsStore } from '@/store/tabs'
@@ -49,6 +53,19 @@ const userStore = useUserStore()
 
 // 面包屑数据
 const breadcrumbItems = ref<Array<{ id: string | number, name: string }>>([])
+
+// 移动端侧栏开合
+const sidebarOpen = ref(false)
+const isMobile = ref(false)
+const updateIsMobile = () => {
+  isMobile.value = window.innerWidth <= 768
+  if (!isMobile.value) sidebarOpen.value = false
+}
+onMounted(() => {
+  updateIsMobile()
+  window.addEventListener('resize', updateIsMobile)
+})
+onUnmounted(() => window.removeEventListener('resize', updateIsMobile))
 
 // 获取文档路径面包屑
 const updateBreadcrumb = async () => {
@@ -132,6 +149,8 @@ const handleDocumentClick = (doc: any) => {
   if (doc.itemType === 'document') {
     tabsStore.openTab(doc)
     router.push(`/workspace/document/${doc.id}`)
+    // 移动端选择文档后收起侧栏
+    if (isMobile.value) sidebarOpen.value = false
   }
 }
 
@@ -221,5 +240,75 @@ const handleLogout = () => {
 .layout-demo :deep(.arco-layout-sider-children) {
   height: 100%;
   overflow: hidden;
+}
+
+/* ============ 移动端/响应式 ============ */
+.app-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mobile-menu-btn {
+  display: none;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  color: var(--color-text-1);
+  font-size: 19px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.mobile-menu-btn:hover {
+  background: var(--color-fill-2);
+}
+
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 99;
+}
+
+@media (max-width: 768px) {
+  .layoutContainer {
+    padding: 0 !important;
+    border-radius: 0 !important;
+  }
+
+  .mobile-menu-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .layout-demo :deep(.arco-layout-sider) {
+    position: fixed !important;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    height: 100% !important;
+    z-index: 100;
+    transform: translateX(-100%);
+    transition: transform 0.25s ease;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  }
+
+  .mobile-sidebar-open :deep(.arco-layout-sider) {
+    transform: translateX(0);
+  }
+
+  .mobile-sidebar-open .sidebar-backdrop {
+    display: block;
+  }
+
+  .content-layout {
+    padding: 0 10px !important;
+  }
 }
 </style>

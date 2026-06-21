@@ -1786,6 +1786,19 @@ onBeforeUnmount(() => {
   margin-top: 0;
 }
 
+/* 移动端:书写区内边距收窄 */
+@media (max-width: 768px) {
+  .editor-content-wrapper {
+    margin: 8px 8px 10px;
+    border-radius: 10px;
+  }
+
+  .editorContainer :deep(.ProseMirror) {
+    padding: 22px 16px 64px 16px !important;
+    font-size: 15px;
+  }
+}
+
 /* 列表样式 */
 .editorContainer :deep(.ProseMirror ul),
 .editorContainer :deep(.ProseMirror .bullet-list) {
