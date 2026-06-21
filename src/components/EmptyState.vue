@@ -61,16 +61,21 @@ onMounted(() => {
 }
 
 .icon-container {
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.75rem;
   animation: float 3s ease-in-out infinite;
+  display: flex;
+  justify-content: center;
 }
 
 .document-icon {
-  width: 4rem;
-  height: 4rem;
-  margin: 0 auto;
-  color: #9ca3af;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+  width: 2.75rem;
+  height: 2.75rem;
+  padding: 1.1rem;
+  box-sizing: content-box;
+  color: var(--c-primary);
+  background: var(--c-primary-soft);
+  border-radius: 22px;
+  box-shadow: 0 8px 24px var(--c-primary-ring);
 }
 
 .text-container {
@@ -79,14 +84,14 @@ onMounted(() => {
 
 .title {
   font-size: 1.5rem;
-  font-weight: 600;
-  color: #374151;
+  font-weight: 700;
+  color: var(--c-text);
   margin-bottom: 0.5rem;
   animation: fadeInUp 0.6s ease-out;
 }
 
 .description {
-  color: #6b7280;
+  color: var(--c-text-2);
   font-size: 1rem;
   animation: fadeInUp 0.6s ease-out 0.2s both;
 }

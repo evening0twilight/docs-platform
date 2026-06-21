@@ -1,8 +1,8 @@
 <template>
-  <div class="not-found-container w-full h-screen flex flex-col items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50">
+  <div class="not-found-container w-full h-screen flex flex-col items-center justify-center bg-gradient-to-br from-indigo-50 to-slate-50">
     <div class="text-center">
       <!-- 404 数字 -->
-      <div class="text-9xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-600 mb-4">
+      <div class="text-9xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-violet-500 mb-4">
         404
       </div>
       
@@ -32,16 +32,16 @@
           <circle cx="100" cy="80" r="25" fill="url(#gradient3)" />
           <defs>
             <linearGradient id="gradient1" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style="stop-color:#8B5CF6" />
-              <stop offset="100%" style="stop-color:#EC4899" />
+              <stop offset="0%" style="stop-color:#6366f1" />
+              <stop offset="100%" style="stop-color:#8b5cf6" />
             </linearGradient>
             <linearGradient id="gradient2" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style="stop-color:#06B6D4" />
-              <stop offset="100%" style="stop-color:#8B5CF6" />
+              <stop offset="0%" style="stop-color:#818cf8" />
+              <stop offset="100%" style="stop-color:#6366f1" />
             </linearGradient>
             <linearGradient id="gradient3" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" style="stop-color:#10B981" />
-              <stop offset="100%" style="stop-color:#06B6D4" />
+              <stop offset="0%" style="stop-color:#a5b4fc" />
+              <stop offset="100%" style="stop-color:#818cf8" />
             </linearGradient>
           </defs>
         </svg>
@@ -70,9 +70,9 @@ const goBack = () => {
 
 <style scoped>
 .not-found-container {
-  background-image: 
-    radial-gradient(circle at 20% 80%, rgba(139, 92, 246, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(236, 72, 153, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 40% 40%, rgba(6, 182, 212, 0.1) 0%, transparent 50%);
+  background-image:
+    radial-gradient(circle at 20% 80%, rgba(99, 102, 241, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(79, 70, 229, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(129, 140, 248, 0.1) 0%, transparent 50%);
 }
 </style>
