@@ -45,7 +45,8 @@ export async function getVersionDetail(
 export async function restoreDocumentVersion(
   documentId: number,
   data: RestoreVersionRequest
-): Promise<DocumentVersion> {
+): Promise<{ message: string; versionNumber: number; content: string }> {
+  // 后端恢复接口已返回恢复后的 content,前端无需再 getVersionDetail 取一次
   return http.post(`/documents/${documentId}/restore`, data);
 }
 

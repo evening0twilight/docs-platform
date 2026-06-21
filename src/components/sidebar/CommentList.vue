@@ -200,6 +200,12 @@ const setupSelectionListener = () => {
       hasSelection.value = true
       selectedText.value = editor.state.doc.textBetween(from, to)
       selectionRange.value = { from, to }
+    } else if (!newCommentContent.value) {
+      // 选区清空且尚未输入评论草稿时,收起新评论框,避免残留过期选区的输入框;
+      // 若用户已在输入(点进文本框会让编辑器选区变空),则保留输入框不打断。
+      hasSelection.value = false
+      selectedText.value = ''
+      selectionRange.value = { from: 0, to: 0 }
     }
   }
   boundEditor = props.editor
@@ -322,10 +328,11 @@ const handleResolve = async (commentId: string) => {
     const comment = comments.value.find(c => c.id === commentId)
     if (comment) {
       comment.resolved = true
-      // 更新统计
+      // 乐观更新统计(非负兜底),随后与服务端对账
       stats.value.resolved++
-      stats.value.unresolved--
+      stats.value.unresolved = Math.max(0, stats.value.unresolved - 1)
     }
+    void loadStats()
 
     Message.success('评论已标记为已解决')
   } catch (error: any) {
@@ -348,14 +355,15 @@ const handleDelete = async (commentId: string) => {
       const comment = comments.value[index]
       comments.value.splice(index, 1)
 
-      // 更新统计
-      stats.value.total--
+      // 更新统计(非负兜底)
+      stats.value.total = Math.max(0, stats.value.total - 1)
       if (comment.resolved) {
-        stats.value.resolved--
+        stats.value.resolved = Math.max(0, stats.value.resolved - 1)
       } else {
-        stats.value.unresolved--
+        stats.value.unresolved = Math.max(0, stats.value.unresolved - 1)
       }
     }
+    void loadStats()
 
     // 从编辑器中移除评论标记
     if (props.editor) {
@@ -394,6 +402,9 @@ const handleLocate = (comment: Comment) => {
 
 watch(() => props.documentId, (newId) => {
   if (newId) {
+    // 切换文档时先清零本地统计/列表,避免沿用上一个文档的计数
+    comments.value = []
+    stats.value = { total: 0, resolved: 0, unresolved: 0 }
     loadComments()
   }
 }, { immediate: true })

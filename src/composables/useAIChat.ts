@@ -22,6 +22,8 @@ export function useAIChat(editor: Editor) {
   const messages = ref<AIMessage[]>([]);
   const isLoading = ref(false);
   const currentStreamingMessageId = ref<string | null>(null);
+  // 用于取消进行中的流式请求(停止 / 组件卸载时)
+  let streamAbort: AbortController | null = null;
 
   // 是否有选中文本
   const hasSelection = computed(() => {
@@ -61,6 +63,7 @@ export function useAIChat(editor: Editor) {
 
   // 发送消息(非流式)
   async function sendMessage(userInput: string) {
+    if (isLoading.value) return; // 防止并发请求
     if (!userInput.trim()) {
       Message.warning('请输入内容');
       return;
@@ -94,10 +97,7 @@ export function useAIChat(editor: Editor) {
       messages.value.push(aiMessage);
 
       // 解析并执行命令
-      const executed = parseAndExecuteCommand(response.content, editor);
-      if (executed) {
-        console.log('✅ AI命令执行成功');
-      }
+      parseAndExecuteCommand(response.content, editor);
     } catch (error: any) {
       console.error('发送消息失败:', error);
 
@@ -118,12 +118,14 @@ export function useAIChat(editor: Editor) {
 
   // 发送消息(流式)
   async function sendMessageStream(userInput: string) {
+    if (isLoading.value) return; // 防止并发请求
     if (!userInput.trim()) {
       Message.warning('请输入内容');
       return;
     }
 
     isLoading.value = true;
+    streamAbort = new AbortController();
 
     // 添加用户消息
     const userMessage: AIMessage = {
@@ -149,11 +151,14 @@ export function useAIChat(editor: Editor) {
     try {
       const context = getEditorContext();
 
-      // 使用流式API
-      for await (const chunk of streamAIChat({
-        message: userInput,
-        context,
-      })) {
+      // 使用流式API(可被 stopStreaming/卸载取消)
+      for await (const chunk of streamAIChat(
+        {
+          message: userInput,
+          context,
+        },
+        streamAbort.signal
+      )) {
         // 更新消息内容
         const messageIndex = messages.value.findIndex(
           (m) => m.id === aiMessageId
@@ -169,28 +174,27 @@ export function useAIChat(editor: Editor) {
         messages.value[messageIndex].isStreaming = false;
 
         // 解析并执行命令
-        const executed = parseAndExecuteCommand(
-          messages.value[messageIndex].content,
-          editor
-        );
-        if (executed) {
-          console.log('✅ AI命令执行成功');
-        }
+        parseAndExecuteCommand(messages.value[messageIndex].content, editor);
       }
     } catch (error: any) {
-      console.error('流式请求失败:', error);
-
       const messageIndex = messages.value.findIndex((m) => m.id === aiMessageId);
       if (messageIndex !== -1) {
         messages.value[messageIndex].isStreaming = false;
-        messages.value[messageIndex].error =
-          error.message || '发送失败,请重试';
       }
-
-      Message.error('AI请求失败: ' + (error.message || '未知错误'));
+      // 用户主动停止/卸载导致的中止不算错误,不弹提示
+      if (error?.name === 'AbortError') {
+        // 已被取消,静默结束
+      } else {
+        console.error('流式请求失败:', error);
+        if (messageIndex !== -1) {
+          messages.value[messageIndex].error = error.message || '发送失败,请重试';
+        }
+        Message.error('AI请求失败: ' + (error.message || '未知错误'));
+      }
     } finally {
       isLoading.value = false;
       currentStreamingMessageId.value = null;
+      streamAbort = null;
     }
   }
 
@@ -198,6 +202,7 @@ export function useAIChat(editor: Editor) {
   async function executeQuickAction(
     actionId: 'polish' | 'expand' | 'summarize' | 'translate' | 'continue'
   ) {
+    if (isLoading.value) return; // 防止并发请求
     const context = getEditorContext();
 
     // 根据操作类型确定使用的文本
@@ -263,8 +268,12 @@ export function useAIChat(editor: Editor) {
     Message.success('对话已清空');
   }
 
-  // 停止流式响应
+  // 停止流式响应(取消进行中的 fetch 流)
   function stopStreaming() {
+    if (streamAbort) {
+      streamAbort.abort();
+      streamAbort = null;
+    }
     if (currentStreamingMessageId.value) {
       const messageIndex = messages.value.findIndex(
         (m) => m.id === currentStreamingMessageId.value

@@ -13,7 +13,7 @@
       <!-- 快捷操作按钮组 -->
       <div class="quick-actions">
         <a-button v-for="preset in AI_PRESETS" :key="preset.id" size="small"
-          :disabled="preset.requiresSelection && !hasSelection" @click="handleQuickAction(preset.id)"
+          :disabled="isLoading || (preset.requiresSelection && !hasSelection)" @click="handleQuickAction(preset.id)"
           :title="preset.description">
           {{ preset.icon }} {{ preset.label }}
         </a-button>
@@ -75,7 +75,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, watch } from 'vue';
+import { ref, nextTick, watch, onBeforeUnmount } from 'vue';
 import type { Editor } from '@tiptap/vue-3';
 import { useAIChat } from '@/composables/useAIChat';
 import { AI_PRESETS } from '@/utils/aiPresets';
@@ -93,7 +93,13 @@ const {
   sendMessageStream,
   executeQuickAction,
   clearChat,
+  stopStreaming,
 } = useAIChat(props.editor);
+
+// 组件卸载(切换文档/关闭面板)时取消进行中的流式请求,避免向已销毁组件写状态
+onBeforeUnmount(() => {
+  stopStreaming();
+});
 
 const inputText = ref('');
 const messagesRef = ref<HTMLElement>();

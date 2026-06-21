@@ -450,7 +450,7 @@ export const moveFolder = async (
  */
 export const updateDocumentPermission = async (
   documentId: number,
-  permissionId: number,
+  permissionId: string,
   role: 'editor' | 'viewer'
 ): Promise<any> => {
   try {

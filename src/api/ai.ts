@@ -63,7 +63,8 @@ const AI_BASE = (import.meta.env.VITE_API_BASE_URL || '/api').replace(/\/$/, '')
  * 使用 Fetch + ReadableStream 实现流式请求(SSE)
  */
 export async function* streamAIChat(
-  data: AIChatRequest
+  data: AIChatRequest,
+  signal?: AbortSignal
 ): AsyncGenerator<string, void, unknown> {
   // 与全站一致使用 'token'(此前误用 'access_token' 会导致鉴权失败)
   const token =
@@ -76,6 +77,8 @@ export async function* streamAIChat(
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(data),
+    // 传入 AbortSignal:停止/卸载时可取消未完成的流式请求
+    signal,
   });
 
   if (!response.ok) {

@@ -26,20 +26,18 @@
           </a-radio-group>
         </a-form-item>
 
-        <!-- 分享链接（分享成功后显示） -->
-        <a-form-item v-if="shareLink" label="分享链接">
-          <a-input-group>
-            <a-input :model-value="shareLink" readonly />
-            <a-button type="primary" @click="copyShareLink">复制</a-button>
-          </a-input-group>
-          <div class="form-tip success">✓ 分享成功！发送此链接给用户即可访问文档</div>
+        <!-- 分享成功提示(按用户授权,无需复制链接) -->
+        <a-form-item v-if="shared">
+          <div class="form-tip success">
+            ✓ 已分享给该用户,对方将在「分享给我」中看到此文档(按账号授权,无需发送链接)
+          </div>
         </a-form-item>
       </a-form>
     </div>
     <template #footer>
       <a-space>
-        <a-button @click="handleCancel">{{ shareLink ? '关闭' : '取消' }}</a-button>
-        <a-button v-if="!shareLink" type="primary" :loading="loading" @click="handleShare">
+        <a-button @click="handleCancel">{{ shared ? '关闭' : '取消' }}</a-button>
+        <a-button v-if="!shared" type="primary" :loading="loading" @click="handleShare">
           分享
         </a-button>
       </a-space>
@@ -54,7 +52,7 @@ import { Message } from '@arco-design/web-vue'
 
 const visible = ref(false)
 const loading = ref(false)
-const shareLink = ref('')
+const shared = ref(false)
 const documentId = ref<string | number>('')
 
 const formData = reactive({
@@ -67,7 +65,7 @@ function openDialog(doc?: any) {
   // 重置表单
   formData.userIdentifier = ''
   formData.role = 'editor'
-  shareLink.value = ''
+  shared.value = false
 
   // 设置文档ID
   if (doc) {
@@ -107,18 +105,7 @@ async function handleShare() {
     )
 
     Message.success('分享成功！')
-
-    // 生成分享链接（修正路径为 /workspace/document/:id）
-    const baseUrl = window.location.origin
-    shareLink.value = `${baseUrl}/workspace/document/${documentId.value}`
-
-    // 自动复制到剪贴板
-    try {
-      await navigator.clipboard.writeText(shareLink.value)
-      Message.info('分享链接已复制到剪贴板')
-    } catch (e) {
-      console.warn('自动复制失败:', e)
-    }
+    shared.value = true
 
   } catch (error: any) {
     console.error('分享失败:', error)
@@ -126,17 +113,6 @@ async function handleShare() {
     Message.error(errMsg)
   } finally {
     loading.value = false
-  }
-}
-
-// 复制分享链接
-async function copyShareLink() {
-  try {
-    await navigator.clipboard.writeText(shareLink.value)
-    Message.success('链接已复制到剪贴板')
-  } catch (error) {
-    console.error('复制失败:', error)
-    Message.error('复制失败，请手动复制')
   }
 }
 

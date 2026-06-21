@@ -112,19 +112,6 @@ export function executeAICommand(command: AICommand, editor: Editor): boolean {
         editor.chain().focus().setHorizontalRule().run();
         break;
 
-      // ========== 对齐操作 (需要安装@tiptap/extension-text-align) ==========
-      // case 'alignLeft':
-      //   editor.chain().focus().setTextAlign('left').run();
-      //   break;
-
-      // case 'alignCenter':
-      //   editor.chain().focus().setTextAlign('center').run();
-      //   break;
-
-      // case 'alignRight':
-      //   editor.chain().focus().setTextAlign('right').run();
-      //   break;
-
       // ========== 其他操作 ==========
       case 'clearFormatting':
         editor.chain().focus().clearNodes().unsetAllMarks().run();
