@@ -365,7 +365,7 @@ const getButtonClass = (markType: string, options?: any) => {
   padding: 0 0.5rem;
   flex-wrap: nowrap;
   gap: 8px;
-  background: #fff;
+  background: var(--c-surface);
   white-space: nowrap;
   position: relative;
   z-index: 100;
@@ -388,12 +388,12 @@ const getButtonClass = (markType: string, options?: any) => {
 }
 
 .heading-trigger:hover {
-  background-color: #f0f0f0;
+  background-color: var(--c-bg);
 }
 
 .heading-trigger.is-active {
-  background-color: #4f46e5;
-  border: 1px solid #4f46e5;
+  background-color: var(--c-primary);
+  border: 1px solid var(--c-primary);
 }
 
 .heading-trigger.is-active img {
@@ -405,8 +405,8 @@ const getButtonClass = (markType: string, options?: any) => {
   top: -8px;
   left: 100%;
   margin-left: 4px;
-  background: #fff;
-  border: 1px solid #e0e0e0;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
   border-radius: 8px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   padding: 4px;
@@ -456,12 +456,12 @@ const getButtonClass = (markType: string, options?: any) => {
 }
 
 .heading-menu-item:hover {
-  background-color: #f0f0f0;
+  background-color: var(--c-bg);
 }
 
 .heading-menu-item.is-active {
-  background-color: #e6f4ff;
-  border: 1px solid #91caff;
+  background-color: var(--c-primary-soft);
+  border: 1px solid var(--c-primary);
 }
 
 .heading-menu-item img {
@@ -478,13 +478,13 @@ const getButtonClass = (markType: string, options?: any) => {
 }
 
 .toolContainer > div:not(.heading-dropdown):hover {
-  background-color: #f0f0f0;
+  background-color: var(--c-bg);
 }
 
 /* 完全激活状态 */
 .toolContainer > div.is-active {
-  background-color: #4f46e5;
-  border: 1px solid #4f46e5;
+  background-color: var(--c-primary);
+  border: 1px solid var(--c-primary);
 }
 
 .toolContainer > div.is-active img {
@@ -493,8 +493,8 @@ const getButtonClass = (markType: string, options?: any) => {
 
 /* 部分激活状态 */
 .toolContainer > div.is-partial {
-  background-color: #e6f4ff;
-  border: 1px solid #91caff;
+  background-color: var(--c-primary-soft);
+  border: 1px solid var(--c-primary);
 }
 
 img {

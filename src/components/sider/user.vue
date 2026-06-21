@@ -134,7 +134,7 @@ const handleLogout = () => {
 .user-info-card {
   position: relative;
   z-index: 1;
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--c-surface);
   border-radius: 12px;
   padding: 16px;
   backdrop-filter: blur(10px);
@@ -193,7 +193,7 @@ const handleLogout = () => {
 .user-name {
   font-size: 18px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--c-text);
   margin: 0 0 6px 0;
   background: linear-gradient(135deg, #4f46e5, #6366f1);
   -webkit-background-clip: text;
@@ -203,7 +203,7 @@ const handleLogout = () => {
 
 .user-email {
   font-size: 13px;
-  color: #86909c;
+  color: var(--c-text-2);
   margin: 0;
 }
 
@@ -233,7 +233,7 @@ const handleLogout = () => {
   border-radius: 10px;
   cursor: pointer;
   transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--c-surface);
   backdrop-filter: blur(10px);
   position: relative;
   overflow: hidden;
@@ -280,7 +280,7 @@ const handleLogout = () => {
   flex: 1;
   font-size: 15px;
   font-weight: 500;
-  color: #1d2129;
+  color: var(--c-text);
 }
 
 .logout-button .button-text {
@@ -290,7 +290,7 @@ const handleLogout = () => {
 .button-arrow {
   font-size: 18px;
   font-weight: bold;
-  color: #86909c;
+  color: var(--c-text-3);
   opacity: 0;
   transform: translateX(-10px);
   transition: all 0.3s ease;
@@ -302,7 +302,7 @@ const handleLogout = () => {
 }
 
 .info-button:hover .button-arrow {
-  color: #4f46e5;
+  color: var(--c-primary);
 }
 
 .logout-button:hover .button-arrow {

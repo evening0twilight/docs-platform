@@ -349,17 +349,17 @@ defineExpose({
 
 .addDocsContainer :deep(.arco-input) {
   border-radius: 8px;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--c-border);
   transition: all 0.3s;
 }
 
 .addDocsContainer :deep(.arco-input:hover) {
-  border-color: #4f46e5;
+  border-color: var(--c-primary);
 }
 
 .addDocsContainer :deep(.arco-input:focus) {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 3px var(--c-primary-ring);
 }
 
 .addDocsContainer :deep(.arco-tree-select) {
@@ -368,17 +368,17 @@ defineExpose({
 
 .addDocsContainer :deep(.arco-select-view) {
   border-radius: 8px;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--c-border);
   transition: all 0.3s;
 }
 
 .addDocsContainer :deep(.arco-select-view:hover) {
-  border-color: #4f46e5;
+  border-color: var(--c-primary);
 }
 
 .addDocsContainer :deep(.arco-select-focused .arco-select-view) {
-  border-color: #4f46e5;
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+  border-color: var(--c-primary);
+  box-shadow: 0 0 0 3px var(--c-primary-ring);
 }
 
 .addDocsContainer :deep(.arco-tree-node-title) {
@@ -391,16 +391,16 @@ defineExpose({
 }
 
 .addDocsContainer :deep(.arco-tree-node-selected .arco-tree-node-title) {
-  background-color: rgba(79, 70, 229, 0.1);
+  background-color: var(--c-primary-soft);
 }
 
 .addDocsContainer :deep(.arco-tree-node-title:hover) {
-  background-color: #f2f3f5;
+  background-color: var(--c-bg);
 }
 
 .addDocsContainer :deep(.arco-modal-footer) {
   padding: 16px 24px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--c-border);
 }
 
 .addDocsContainer :deep(.arco-btn-primary) {
@@ -418,7 +418,7 @@ defineExpose({
 }
 
 .addDocsContainer :deep(.arco-btn-primary:disabled) {
-  background: #c9cdd4;
+  background: var(--c-border-strong);
   cursor: not-allowed;
 }
 

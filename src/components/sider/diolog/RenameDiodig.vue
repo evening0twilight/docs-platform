@@ -150,11 +150,11 @@ defineExpose({
   gap: 4px;
   font-size: 14px;
   font-weight: 500;
-  color: #1d2129;
+  color: var(--c-text);
 }
 
 .label-text {
-  color: #4e5969;
+  color: var(--c-text-2);
 }
 
 .label-required {
@@ -166,15 +166,15 @@ defineExpose({
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #86909c;
+  color: var(--c-text-3);
   padding: 8px 12px;
-  background: #f7f8fa;
+  background: var(--c-bg);
   border-radius: 6px;
 }
 
 .rename-dialog :deep(.arco-input) {
   border-radius: 8px;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--c-border);
   transition: all 0.3s;
 }
 

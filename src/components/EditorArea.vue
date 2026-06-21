@@ -1504,7 +1504,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.8);
+  background: color-mix(in srgb, var(--c-surface) 82%, transparent);
   z-index: 10;
 }
 
@@ -1528,7 +1528,7 @@ onBeforeUnmount(() => {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--c-text);
 }
 
 .modified-indicator {
@@ -1909,7 +1909,7 @@ onBeforeUnmount(() => {
 .editorContainer :deep(.ProseMirror pre),
 .editorContainer :deep(.ProseMirror .code-block) {
   background: var(--c-bg);
-  color: #333;
+  color: var(--c-text);
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
   padding: 0.75rem 1rem;
   border-radius: 0.5rem;
@@ -1927,8 +1927,10 @@ onBeforeUnmount(() => {
 /* 高亮样式 */
 .editorContainer :deep(.ProseMirror mark),
 .editorContainer :deep(.ProseMirror .highlight) {
-  background-color: #fef08a;
-  color: inherit;
+  /* 荧光笔标记:底色恒为亮黄,文字固定为深色以保证两种主题下都可读(不能用 inherit,
+     否则暗色下浅色文字落在亮黄底上不可读) */
+  background-color: #fde68a;
+  color: #422006;
   padding: 0.125rem 0.25rem;
   border-radius: 0.25rem;
 }
@@ -2015,7 +2017,7 @@ onBeforeUnmount(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(255, 255, 255, 0.9);
+  background-color: color-mix(in srgb, var(--c-surface) 90%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;

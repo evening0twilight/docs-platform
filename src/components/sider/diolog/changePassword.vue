@@ -270,7 +270,7 @@ defineExpose({
   gap: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: #4e5969;
+  color: var(--c-text-2);
 }
 
 .label-icon {
@@ -279,20 +279,20 @@ defineExpose({
 
 /* 自定义输入框样式 */
 .custom-input :deep(.arco-input-wrapper) {
-  border: 2px solid #e5e6eb;
+  border: 2px solid var(--c-border);
   border-radius: 10px;
   transition: all 0.3s ease;
-  background: #f7f8fa;
+  background: var(--c-bg);
 }
 
 .custom-input :deep(.arco-input-wrapper:hover) {
-  border-color: #4f46e5;
-  background: #fff;
+  border-color: var(--c-primary);
+  background: var(--c-surface);
 }
 
 .custom-input :deep(.arco-input-wrapper.arco-input-focus) {
-  border-color: #4f46e5;
-  background: #fff;
+  border-color: var(--c-primary);
+  background: var(--c-surface);
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
@@ -307,7 +307,7 @@ defineExpose({
 .strength-bar {
   flex: 1;
   height: 6px;
-  background: #e5e6eb;
+  background: var(--c-border);
   border-radius: 3px;
   overflow: hidden;
   position: relative;
@@ -355,7 +355,7 @@ defineExpose({
   justify-content: flex-end;
   gap: 12px;
   padding-top: 20px;
-  border-top: 1px solid #e5e6eb;
+  border-top: 1px solid var(--c-border);
 }
 
 .cancel-btn,
@@ -373,12 +373,12 @@ defineExpose({
 }
 
 .cancel-btn {
-  background: #f7f8fa;
-  color: #4e5969;
+  background: var(--c-bg);
+  color: var(--c-text-2);
 }
 
 .cancel-btn:hover {
-  background: #e5e6eb;
+  background: var(--c-border);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }

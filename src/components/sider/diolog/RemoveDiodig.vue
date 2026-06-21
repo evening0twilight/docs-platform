@@ -300,7 +300,7 @@ defineExpose({
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  background: color-mix(in srgb, var(--c-danger) 10%, var(--c-surface));
   border-radius: 8px;
 }
 
@@ -316,7 +316,7 @@ defineExpose({
 .item-name {
   font-size: 15px;
   font-weight: 500;
-  color: #1d2129;
+  color: var(--c-text);
 }
 
 .selected-path {
@@ -324,9 +324,9 @@ defineExpose({
   align-items: center;
   gap: 8px;
   font-size: 13px;
-  color: #4e5969;
+  color: var(--c-text-2);
   padding: 10px 14px;
-  background: #f2f3f5;
+  background: var(--c-bg);
   border-radius: 6px;
   border-left: 3px solid #dc2626;
 }
@@ -336,11 +336,11 @@ defineExpose({
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #86909c;
+  color: var(--c-text-3);
   padding: 8px 12px;
-  background: #fff7e6;
+  background: color-mix(in srgb, var(--c-warn) 10%, var(--c-surface));
   border-radius: 6px;
-  border-left: 3px solid #d97706;
+  border-left: 3px solid var(--c-warn);
 }
 
 /* 复用 addDocs 的样式 */
@@ -376,7 +376,7 @@ defineExpose({
 
 .move-dialog-container :deep(.arco-select-view) {
   border-radius: 8px;
-  border: 1px solid #e5e6eb;
+  border: 1px solid var(--c-border);
   transition: all 0.3s;
 }
 
@@ -403,12 +403,12 @@ defineExpose({
 }
 
 .move-dialog-container :deep(.arco-tree-node-title:hover) {
-  background-color: #f2f3f5;
+  background-color: var(--c-bg);
 }
 
 .move-dialog-container :deep(.arco-modal-footer) {
   padding: 16px 24px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--c-border);
 }
 
 .move-dialog-container :deep(.arco-btn-primary) {
@@ -426,7 +426,7 @@ defineExpose({
 }
 
 .move-dialog-container :deep(.arco-btn-primary:disabled) {
-  background: #c9cdd4;
+  background: var(--c-border-strong);
   cursor: not-allowed;
 }
 

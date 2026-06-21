@@ -290,7 +290,7 @@ defineExpose({
   gap: 12px;
   font-size: 18px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--c-text);
 }
 
 .title-icon {
@@ -353,21 +353,21 @@ defineExpose({
 /* 邮箱显示 */
 .email-display {
   padding: 12px 16px;
-  background: #f7f8fa;
+  background: var(--c-bg);
   border-radius: 8px;
   font-size: 14px;
-  color: #4e5969;
+  color: var(--c-text-2);
 }
 
 .label {
   font-weight: 500;
-  color: #86909c;
+  color: var(--c-text-3);
   margin-right: 8px;
 }
 
 .email-text {
   font-weight: 600;
-  color: #1d2129;
+  color: var(--c-text);
 }
 
 /* 表单项 */
@@ -383,7 +383,7 @@ defineExpose({
   gap: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: #4e5969;
+  color: var(--c-text-2);
 }
 
 .label-icon {
@@ -411,7 +411,7 @@ defineExpose({
 
   :deep(.arco-input) {
     border-radius: 8px;
-    border: 2px solid #e5e6eb;
+    border: 2px solid var(--c-border);
     transition: all 0.3s ease;
 
     &:hover {
@@ -480,7 +480,7 @@ defineExpose({
 /* 提示信息 */
 .tips-section {
   padding: 16px;
-  background: #f7f8fa;
+  background: var(--c-bg);
   border-radius: 10px;
   display: flex;
   flex-direction: column;
@@ -492,7 +492,7 @@ defineExpose({
   align-items: flex-start;
   gap: 8px;
   font-size: 13px;
-  color: #4e5969;
+  color: var(--c-text-2);
   line-height: 1.6;
 }
 
@@ -522,11 +522,11 @@ defineExpose({
 }
 
 .cancel-btn {
-  background: #f2f3f5;
-  color: #4e5969;
+  background: var(--c-bg);
+  color: var(--c-text-2);
 
   &:hover:not(:disabled) {
-    background: #e5e6eb;
+    background: var(--c-border);
   }
 
   &:disabled {

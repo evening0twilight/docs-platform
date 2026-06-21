@@ -341,7 +341,7 @@ defineExpose({
   gap: 12px;
   font-size: 18px;
   font-weight: 600;
-  color: #1d2129;
+  color: var(--c-text);
 }
 
 .title-icon {
@@ -373,9 +373,9 @@ defineExpose({
   display: flex;
   gap: 12px;
   padding: 16px;
-  background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+  background: var(--c-primary-soft);
   border-radius: 12px;
-  border-left: 4px solid #ff9800;
+  border-left: 4px solid var(--c-warn);
 }
 
 .notice-icon {
@@ -390,13 +390,13 @@ defineExpose({
 .notice-title {
   font-size: 14px;
   font-weight: 600;
-  color: #e65100;
+  color: var(--c-warn);
   margin-bottom: 4px;
 }
 
 .notice-text {
   font-size: 13px;
-  color: #f57c00;
+  color: var(--c-warn);
   line-height: 1.5;
   margin: 0;
 }
@@ -404,21 +404,21 @@ defineExpose({
 /* 当前邮箱显示 */
 .current-email-display {
   padding: 12px 16px;
-  background: #f7f8fa;
+  background: var(--c-bg);
   border-radius: 8px;
   font-size: 14px;
-  color: #4e5969;
+  color: var(--c-text-2);
 }
 
 .label {
   font-weight: 500;
-  color: #86909c;
+  color: var(--c-text-3);
   margin-right: 8px;
 }
 
 .email-text {
   font-weight: 600;
-  color: #1d2129;
+  color: var(--c-text);
 }
 
 /* 表单项 */
@@ -434,7 +434,7 @@ defineExpose({
   gap: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: #4e5969;
+  color: var(--c-text-2);
 }
 
 .label-icon {
@@ -442,7 +442,7 @@ defineExpose({
 }
 
 .required-mark {
-  color: #f53f3f;
+  color: var(--c-danger);
   margin-left: -4px;
 }
 
@@ -462,30 +462,30 @@ defineExpose({
 
   :deep(.arco-input) {
     border-radius: 8px;
-    border: 2px solid #e5e6eb;
+    border: 2px solid var(--c-border);
     transition: all 0.3s ease;
 
     &:hover {
-      border-color: #4f46e5;
+      border-color: var(--c-primary);
     }
 
     &:focus {
-      border-color: #4f46e5;
+      border-color: var(--c-primary);
       box-shadow: 0 0 0 3px rgba(22, 93, 255, 0.1);
     }
   }
 
   :deep(.arco-input-password) {
     border-radius: 8px;
-    border: 2px solid #e5e6eb;
+    border: 2px solid var(--c-border);
     transition: all 0.3s ease;
 
     &:hover {
-      border-color: #4f46e5;
+      border-color: var(--c-primary);
     }
 
     &:focus-within {
-      border-color: #4f46e5;
+      border-color: var(--c-primary);
       box-shadow: 0 0 0 3px rgba(22, 93, 255, 0.1);
     }
   }
@@ -546,7 +546,7 @@ defineExpose({
 /* 提示信息 */
 .tips-section {
   padding: 16px;
-  background: #f7f8fa;
+  background: var(--c-bg);
   border-radius: 10px;
   display: flex;
   flex-direction: column;
@@ -558,7 +558,7 @@ defineExpose({
   align-items: flex-start;
   gap: 8px;
   font-size: 13px;
-  color: #4e5969;
+  color: var(--c-text-2);
   line-height: 1.6;
 }
 
@@ -588,11 +588,11 @@ defineExpose({
 }
 
 .cancel-btn {
-  background: #f2f3f5;
-  color: #4e5969;
+  background: var(--c-bg);
+  color: var(--c-text-2);
 
   &:hover:not(:disabled) {
-    background: #e5e6eb;
+    background: var(--c-border);
   }
 
   &:disabled {

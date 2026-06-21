@@ -377,7 +377,7 @@ const handleClearSearch = () => {
 }
 
 .section-header:hover {
-  background: #f4f5f8;
+  background: var(--c-bg);
 }
 
 .section-header:active {
@@ -425,7 +425,7 @@ const handleClearSearch = () => {
 
 /* 分享文档区域:与"我的文档"统一外观 */
 .shared-section .section-header:hover {
-  background: #f4f5f8;
+  background: var(--c-bg);
 }
 
 /* ====== 加载状态 ====== */
@@ -440,7 +440,7 @@ const handleClearSearch = () => {
 
 .loading-text {
   font-size: 13px;
-  color: #86909c;
+  color: var(--c-text-3);
 }
 
 /* ====== 分享文档列表 ====== */
@@ -455,16 +455,16 @@ const handleClearSearch = () => {
   align-items: center;
   gap: 12px;
   padding: 12px;
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
+  background: var(--c-surface);
+  border: 1px solid var(--c-border);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .shared-doc-item:hover {
-  background: #f7f8fa;
-  border-color: #d1d5db;
+  background: var(--c-bg);
+  border-color: var(--c-border-strong);
   transform: translateX(4px);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
@@ -490,7 +490,7 @@ const handleClearSearch = () => {
 .doc-name {
   font-size: 14px;
   font-weight: 500;
-  color: #1d2129;
+  color: var(--c-text);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -501,16 +501,16 @@ const handleClearSearch = () => {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #86909c;
+  color: var(--c-text-3);
 }
 
 .owner {
-  color: #4e5969;
+  color: var(--c-text-2);
   font-weight: 400;
 }
 
 .separator {
-  color: #c9cdd4;
+  color: var(--c-text-3);
   font-weight: normal;
 }
 
@@ -523,13 +523,13 @@ const handleClearSearch = () => {
 }
 
 .permission.perm-editor {
-  background: #e8f7ed;
-  color: #00b42a;
+  background: color-mix(in srgb, var(--c-success) 12%, var(--c-surface));
+  color: var(--c-success);
 }
 
 .permission.perm-viewer {
-  background: #fff7e8;
-  color: #d97706;
+  background: color-mix(in srgb, var(--c-warn) 12%, var(--c-surface));
+  color: var(--c-warn);
 }
 
 /* ====== 空状态 ====== */
@@ -549,7 +549,7 @@ const handleClearSearch = () => {
 
 .empty-text {
   font-size: 13px;
-  color: #86909c;
+  color: var(--c-text-3);
   text-align: center;
 }
 

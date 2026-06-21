@@ -155,7 +155,7 @@ defineExpose({ openDialog })
 
 .form-tip {
   font-size: 12px;
-  color: #86909c;
+  color: var(--c-text-3);
   margin-top: 4px;
 }
 
@@ -169,13 +169,13 @@ defineExpose({ openDialog })
 
 .role-title {
   font-weight: 500;
-  color: #1d2129;
+  color: var(--c-text);
   margin-bottom: 2px;
 }
 
 .role-desc {
   font-size: 12px;
-  color: #86909c;
+  color: var(--c-text-3);
 }
 
 :deep(.arco-radio) {

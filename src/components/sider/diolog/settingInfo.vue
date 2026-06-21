@@ -398,7 +398,7 @@ defineExpose({
 }
 
 .user-avatar {
-  border: 4px solid #fff;
+  border: 4px solid var(--c-surface);
   box-shadow: 0 8px 24px rgba(79, 70, 229, 0.3);
   cursor: pointer;
   transition: all 0.3s ease;
@@ -420,7 +420,7 @@ defineExpose({
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  background: rgba(255, 255, 255, 0.9);
+  background: color-mix(in srgb, var(--c-surface) 90%, transparent);
   border-radius: 50%;
   z-index: 10;
 }
@@ -428,8 +428,8 @@ defineExpose({
 .upload-spinner {
   width: 30px;
   height: 30px;
-  border: 3px solid #f3f3f3;
-  border-top: 3px solid #4f46e5;
+  border: 3px solid var(--c-border);
+  border-top: 3px solid var(--c-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -447,7 +447,7 @@ defineExpose({
 .upload-text {
   margin-top: 8px;
   font-size: 12px;
-  color: #4f46e5;
+  color: var(--c-primary);
   font-weight: 500;
 }
 
@@ -472,7 +472,7 @@ defineExpose({
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 3px solid #fff;
+  border: 3px solid var(--c-surface);
   font-size: 14px;
   animation: bounce 2s ease-in-out infinite;
 }
@@ -491,14 +491,14 @@ defineExpose({
 
 /* 信息项 */
 .info-item {
-  background: #f7f8fa;
+  background: var(--c-bg);
   border-radius: 12px;
   padding: 16px;
   transition: all 0.3s ease;
 }
 
 .info-item:hover {
-  background: #f2f3f5;
+  background: var(--c-border);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
@@ -515,7 +515,7 @@ defineExpose({
   gap: 8px;
   font-size: 14px;
   font-weight: 600;
-  color: #4e5969;
+  color: var(--c-text-2);
 }
 
 .label-icon {
@@ -542,9 +542,9 @@ defineExpose({
 /* 显示内容 */
 .info-display {
   font-size: 16px;
-  color: #1d2129;
+  color: var(--c-text);
   padding: 8px 12px;
-  background: white;
+  background: var(--c-surface);
   border-radius: 8px;
   min-height: 40px;
   display: flex;
@@ -559,18 +559,18 @@ defineExpose({
 }
 
 .custom-input :deep(.arco-input-wrapper) {
-  border: 2px solid #e5e6eb;
+  border: 2px solid var(--c-border);
   border-radius: 8px;
   transition: all 0.3s ease;
-  background: white;
+  background: var(--c-surface);
 }
 
 .custom-input :deep(.arco-input-wrapper:hover) {
-  border-color: #4f46e5;
+  border-color: var(--c-primary);
 }
 
 .custom-input :deep(.arco-input-wrapper.arco-input-focus) {
-  border-color: #4f46e5;
+  border-color: var(--c-primary);
   box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
 }
 
@@ -591,12 +591,12 @@ defineExpose({
 }
 
 .action-btn.cancel {
-  background: #e5e6eb;
-  color: #4e5969;
+  background: var(--c-border);
+  color: var(--c-text-2);
 }
 
 .action-btn.cancel:hover {
-  background: #c9cdd4;
+  background: var(--c-border-strong);
 }
 
 .action-btn.save {
@@ -612,7 +612,7 @@ defineExpose({
 /* 分割线 */
 .divider-line {
   height: 1px;
-  background: linear-gradient(90deg, transparent, #e5e6eb, transparent);
+  background: linear-gradient(90deg, transparent, var(--c-border), transparent);
   margin: 8px 0;
 }
 
@@ -653,7 +653,7 @@ defineExpose({
 
 .password-btn:hover {
   background: linear-gradient(135deg, rgba(79, 70, 229, 0.15), rgba(99, 102, 241, 0.15));
-  border-color: #4f46e5;
+  border-color: var(--c-primary);
   transform: translateX(4px);
 }
 
@@ -691,7 +691,7 @@ defineExpose({
   display: flex;
   justify-content: flex-end;
   padding-top: 20px;
-  border-top: 1px solid #e5e6eb;
+  border-top: 1px solid var(--c-border);
 }
 
 .close-btn {

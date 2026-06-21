@@ -50,20 +50,20 @@ const getInitial = (name: string): string => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #fff;
-  border-left: 1px solid #e5e7eb;
+  background: var(--c-surface);
+  border-left: 1px solid var(--c-border);
 }
 
 .panel-header {
   padding: 16px;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--c-border);
 }
 
 .panel-header h3 {
   margin: 0 0 8px 0;
   font-size: 14px;
   font-weight: 600;
-  color: #1f2937;
+  color: var(--c-text);
 }
 
 .connection-status {
@@ -71,7 +71,7 @@ const getInitial = (name: string): string => {
   align-items: center;
   gap: 6px;
   font-size: 12px;
-  color: #6b7280;
+  color: var(--c-text-2);
 }
 
 .status-dot {
@@ -107,7 +107,7 @@ const getInitial = (name: string): string => {
 }
 
 .user-item:hover {
-  background-color: #f3f4f6;
+  background-color: var(--c-bg);
 }
 
 .user-avatar {
@@ -141,7 +141,7 @@ const getInitial = (name: string): string => {
 .user-name {
   font-size: 14px;
   font-weight: 500;
-  color: #1f2937;
+  color: var(--c-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -155,7 +155,7 @@ const getInitial = (name: string): string => {
 .empty-state {
   padding: 32px 16px;
   text-align: center;
-  color: #9ca3af;
+  color: var(--c-text-3);
   font-size: 13px;
 }
 </style>
