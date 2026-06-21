@@ -27,14 +27,24 @@ export default defineConfig({
   optimizeDeps: {
     // 把 yjs 协同相关入口放进同一次预打包,配合上面的 dedupe,
     // 让 Collaboration 与 CollaborationCaret 经由 @tiptap/y-tiptap 共享同一份 yjs 实例。
+    // 注:@tiptap/y-tiptap 是传递依赖、无法作为裸标识被 include 解析(会告警),
+    // 它会随 collaboration/caret 一起被预打包并经 resolve.dedupe 共享同一份 yjs,
+    // 故此处无需(也不能)单独列出。
     include: [
       'yjs',
       'y-prosemirror',
-      '@tiptap/y-tiptap',
       '@hocuspocus/provider',
       '@tiptap/extension-collaboration',
       '@tiptap/extension-collaboration-caret',
     ],
+  },
+  // 生产构建时把 console.log/console.debug 标记为「无副作用」,
+  // 交给压缩阶段 tree-shake 掉,清理生产环境的调试噪音(保留 console.warn/error)。
+  esbuild: {
+    pure:
+      process.env.NODE_ENV === 'production'
+        ? ['console.log', 'console.debug']
+        : [],
   },
   build: {
     // 生成带哈希的文件名，防止缓存问题

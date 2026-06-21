@@ -162,22 +162,18 @@ export const getDocumentPath = async (documentId: string | number): Promise<Docu
 export const getFolderContents = async (parentId: string | number): Promise<FolderContentsResponse> => {
   try {
     const response = await http.get<any>(`/documents/folders/${parentId}/contents`);
-    console.log('[API] 获取文件夹内容响应:', response);
-    
-    // 处理后端返回的数据结构
-    if (response.data && response.data.contents) {
-      // 分离文件夹和文档
-      const contents = response.data.contents;
+
+    // 响应拦截器已解包,response 即后端 data 字段({ currentFolder, contents, ... }),
+    // 故应读 response.contents 而非 response.data.contents(后者恒为 undefined,
+    // 会导致懒加载/移动/分享对话框拿不到子项而抛错或显示为空)。
+    const contents = response?.contents;
+    if (Array.isArray(contents)) {
       const folders = contents.filter((item: any) => item.itemType === 'folder');
       const documents = contents.filter((item: any) => item.itemType === 'document');
-      
-      return {
-        folders,
-        documents
-      };
+      return { folders, documents };
     }
-    
-    // 如果已经是正确格式，直接返回
+
+    // 已是 { folders, documents } 形态则直接返回
     return response;
   } catch (error) {
     console.error('获取文件夹内容失败:', error);

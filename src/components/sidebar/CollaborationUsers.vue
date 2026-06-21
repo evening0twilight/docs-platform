@@ -232,17 +232,21 @@ const handleCollaborationToggle = async (enabled: boolean) => {
   }
 }
 
-// 处理光标颜色变更
+// 处理光标颜色变更(交给父组件经 socket 下发;成功提示由父组件兜底)
 const handleColorChange = (newColor: string) => {
-  // 通过emit通知父组件更新颜色,父组件会通过socket发送给后端
   emit('color-changed', newColor)
-  Message.success('光标颜色已更新')
 }
 
 // 处理权限变更
 const handlePermissionChange = async (user: UserInfo, newPermission: string) => {
+  // a-select 用 v-model 乐观更新,失败需回滚到相反值(权限只有 editor/viewer 两态)
+  const revert = () => {
+    user.permission = newPermission === 'editor' ? 'viewer' : 'editor'
+  }
+
   if (!props.documentId) {
     Message.error('无法获取文档ID')
+    revert()
     return
   }
 
@@ -256,6 +260,7 @@ const handlePermissionChange = async (user: UserInfo, newPermission: string) => 
 
     if (!userPermission) {
       Message.error('未找到该用户的权限记录')
+      revert()
       return
     }
 
@@ -276,6 +281,7 @@ const handlePermissionChange = async (user: UserInfo, newPermission: string) => 
   } catch (error) {
     console.error('更新权限失败:', error)
     Message.error('更新权限失败')
+    revert() // 回滚下拉框,避免显示后端未接受的状态
   } finally {
     permissionLoading.value.delete(user.userId)
   }

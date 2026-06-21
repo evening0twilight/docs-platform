@@ -101,7 +101,8 @@
           :current-user-id="String(userStore.userInfo?.id || '')"
           :owner-id="String(documentData?.creatorId || documentData?.userId || '')" :document-id="documentId"
           :collaboration-enabled="documentData?.isCollaborationEnabled ?? false"
-          @collaboration-toggled="handleCollaborationToggled" @permission-changed="handlePermissionChanged" />
+          @collaboration-toggled="handleCollaborationToggled" @permission-changed="handlePermissionChanged"
+          @color-changed="handleColorChanged" />
 
         <!-- 历史版本 -->
         <HistoryTimeline v-else-if="editorModeStore.currentMode === EditorMode.HISTORY" :editor="editor" />
@@ -121,7 +122,7 @@ import { useTabsStore } from '@/store/tabs'
 import { useEditorModeStore } from '@/store/editorMode'
 import { EditorMode } from '@/store/editorMode'
 import { useUserStore } from '@/store/user'
-import { getDocument, saveDocumentContent } from '@/api/docs'
+import { getDocument, toggleCollaboration } from '@/api/docs'
 import { getVersionDetail } from '@/api/version'
 import Highlight from '@tiptap/extension-highlight'
 import Superscript from '@tiptap/extension-superscript'
@@ -750,6 +751,14 @@ const {
   computed(() => isModified.value),
 )
 
+// 自动/手动保存成功后复位"已修改"标记(useAutoSave 内部只读 isModified,由此处统一复位)
+watch(saveStatus, (status) => {
+  if (status === 'saved' && documentId.value) {
+    isModified.value = false
+    tabsStore.markModified(documentId.value, false)
+  }
+})
+
 //   辅助函数: 计算光标的行列位置
 const calculateCursorPosition = (editor: any): { line: number; column: number } | null => {
   try {
@@ -1043,81 +1052,23 @@ const fetchDocument = async () => {
   }
 }
 
-// 处理内容变化
+// 处理内容变化(仅负责标记"已修改"——真正的保存统一交给 useAutoSave 以 JSON 写入,
+// 避免此前 HTML 自动保存与 useAutoSave 的 JSON 自动保存并存、互相覆盖导致内容格式错乱)。
 const handleContentChange = () => {
   if (!editor.value || !documentData.value) return
-  // 只读用户(无写权限)不标记修改/不自动保存:
-  // 协同时接收远端编辑会改变内容,但不应触发保存(否则被权限拦截弹"更新失败")
+  // 加载内容/应用远端编辑期间不标记修改(否则文档一打开就显示"未保存",并触发幽灵保存)
+  if (isApplyingRemoteEdit.value) return
+  // 只读用户(无写权限)不标记修改/不自动保存
   if (!editor.value.isEditable) return
 
-  const currentContent = editor.value.getHTML()
-  const originalContent = documentData.value.content || ''
-  const modified = currentContent !== originalContent
-
-  if (modified !== isModified.value) {
-    isModified.value = modified
-    tabsStore.markModified(documentId.value, modified)
-  }
-
-  // 自动保存（延迟2秒）
-  clearTimeout(autoSaveTimer)
-  autoSaveTimer = setTimeout(() => {
-    if (isModified.value) {
-      autoSave()
-    }
-  }, 2000)
-}
-
-// 自动保存
-let autoSaveTimer: number | null = null
-const autoSave = async () => {
-  if (!editor.value || !documentId.value) return
-
-  try {
-    const content = editor.value.getHTML()
-    await saveDocumentContent(documentId.value, content)
-
-    // 更新原始内容
-    if (documentData.value) {
-      documentData.value.content = content
-    }
-
-    // 重置修改状态
-    isModified.value = false
-    tabsStore.markModified(documentId.value, false)
-
-    console.log('自动保存成功')
-  } catch (error) {
-    console.error('自动保存失败:', error)
+  if (!isModified.value) {
+    isModified.value = true
+    tabsStore.markModified(documentId.value, true)
   }
 }
 
-// 手动保存方法
-const manualSave = async () => {
-  if (!editor.value || !documentId.value) {
-    throw new Error('编辑器或文档ID未准备好')
-  }
-
-  try {
-    const content = editor.value.getHTML()
-    await saveDocumentContent(documentId.value, content)
-
-    // 更新原始内容
-    if (documentData.value) {
-      documentData.value.content = content
-    }
-
-    // 重置修改状态
-    isModified.value = false
-    tabsStore.markModified(documentId.value, false)
-
-    console.log('手动保存成功')
-    return true
-  } catch (error) {
-    console.error('手动保存失败:', error)
-    throw error
-  }
-}
+// 注:内容的自动保存(JSON)与版本快照统一由 useAutoSave 负责;
+// saveStatus 变为 SAVED 时在下方 watch 中复位 isModified。
 
 // 打开分享对话框
 const openShareDialog = () => {
@@ -1172,18 +1123,19 @@ const handleManualSaveClick = async () => {
 
 // 启用协作
 const handleEnableCollaboration = async () => {
-  console.log('[EditorArea] 启用协作')
+  if (!documentId.value) return
+  // 仅文档所有者可切换全局协同开关(后端也会再校验)
+  if (!editorModeStore.permissions.isDocumentOwner) {
+    Message.warning('只有文档所有者可以开启协同编辑')
+    return
+  }
   try {
-    // 更新文档特性状态
+    // 调后端持久化协同开关,否则其他用户的服务端权限判断不会变(仍只读)
+    await toggleCollaboration(Number(documentId.value), true)
     editorModeStore.documentFeatures.collaborationEnabled = true
-
-    // 加入文档房间（如果还未加入）
-    if (documentId.value && !collaboration) {
-      // 初始化协作将在 watch documentId 中自动处理
-      console.log('[EditorArea] 等待协作初始化...')
+    if (documentData.value) {
+      ;(documentData.value as any).isCollaborationEnabled = true
     }
-
-    // 切换到协作模式
     editorModeStore.switchMode(EditorMode.COLLABORATION)
     Message.success('已启用协作模式')
   } catch (error) {
@@ -1193,16 +1145,22 @@ const handleEnableCollaboration = async () => {
 }
 
 // 禁用协作
-const handleDisableCollaboration = () => {
-  console.log('[EditorArea] 禁用协作')
+const handleDisableCollaboration = async () => {
+  if (!documentId.value) return
+  if (!editorModeStore.permissions.isDocumentOwner) {
+    Message.warning('只有文档所有者可以关闭协同编辑')
+    return
+  }
   try {
-    // 更新文档特性状态
+    // 调后端持久化关闭协同
+    await toggleCollaboration(Number(documentId.value), false)
     editorModeStore.documentFeatures.collaborationEnabled = false
+    if (documentData.value) {
+      ;(documentData.value as any).isCollaborationEnabled = false
+    }
 
     // 离开文档房间
-    if (documentId.value) {
-      socketService.leaveDocument(documentId.value)
-    }
+    socketService.leaveDocument(documentId.value)
 
     // 切换回普通模式
     editorModeStore.switchMode(EditorMode.NORMAL)
@@ -1254,6 +1212,17 @@ const handleCollaborationToggled = async (enabled: boolean) => {
 }
 
 // 处理权限变更
+// 本人光标颜色变更:经 socket 下发,后端广播给同文档其他用户
+const handleColorChanged = (newColor: string) => {
+  userColor.value = newColor
+  const ok = socketService.updateCursorColor(newColor)
+  if (ok) {
+    Message.success('光标颜色已更新')
+  } else {
+    Message.warning('未连接协同服务,颜色将在重新连接后生效')
+  }
+}
+
 const handlePermissionChanged = async (userId: string, permission: string) => {
   console.log('[EditorArea] 权限变更:', userId, permission)
 
@@ -1348,10 +1317,10 @@ onMounted(() => {
   }
   checkEditor()
 
-  // 监听全局保存事件
+  // 监听全局保存事件(统一走 useAutoSave 的手动保存:JSON 写入 + 版本快照)
   const handleGlobalSave = () => {
     if (documentId.value && isModified.value) {
-      manualSave().catch(error => {
+      handleManualSave().catch((error: unknown) => {
         console.error('全局保存失败:', error)
       })
     }
@@ -1449,15 +1418,12 @@ onMounted(() => {
   })
 })
 
-// 组件卸载前清理
+// 组件卸载前:若有未保存修改,做最后一次保存(JSON,经 useAutoSave 的手动保存)
 onBeforeUnmount(() => {
-  if (autoSaveTimer) {
-    clearTimeout(autoSaveTimer)
-  }
-
-  // 如果有未保存的修改，进行最后一次保存
-  if (isModified.value) {
-    autoSave()
+  if (isModified.value && documentId.value) {
+    handleManualSave().catch((error: unknown) => {
+      console.error('卸载前保存失败:', error)
+    })
   }
 })
 

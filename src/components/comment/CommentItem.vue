@@ -110,9 +110,12 @@ const showReplyInput = ref(false)
 const replyContent = ref('')
 const replying = ref(false)
 
-// 是否可以管理评论（所有者或评论创建者）
+// 是否可以管理评论(评论创建者)。注意 comment.userId 为字符串、store.id 为数字,
+// 必须统一成字符串比较,否则 '2' === 2 恒为 false,作者永远无法解决/删除自己的评论。
 const canManage = computed(() => {
-  return props.comment.userId === userStore.userInfo?.id
+  const me = userStore.userInfo?.id
+  if (me === undefined || me === null || me === '') return false
+  return String(props.comment.userId) === String(me)
 })
 
 // 获取用户名首字母

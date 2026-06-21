@@ -444,6 +444,15 @@ class SocketService {
   }
 
   /**
+   * 更新本人光标颜色(后端 update-cursor-color 会广播给同文档其他用户)
+   */
+  updateCursorColor(color: string): boolean {
+    if (!this.socket?.connected) return false
+    this.socket.emit('update-cursor-color', { color })
+    return true
+  }
+
+  /**
    * 监听文档编辑
    */
   onDocumentEdit(callback: (data: any) => void): (() => void) {

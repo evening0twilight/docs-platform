@@ -236,6 +236,8 @@ const fetchDocuments = async () => {
   } catch (error) {
     console.error('获取文档树失败:', error)
     rawData.value = []
+    // 给出明确错误提示,避免加载失败被误显示为"暂无文档"的空状态
+    Message.error('加载文档列表失败,请稍后重试')
   } finally {
     loading.value = false
   }
@@ -261,8 +263,8 @@ const loadMore = async (node) => {
     return children;
   }
   catch (error) {
-    // 得加上错误提示
-    console.log(error);
+    console.error('展开子目录失败:', error);
+    Message.error('展开文件夹失败,请稍后重试');
     return [];
   }
 }

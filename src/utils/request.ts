@@ -83,10 +83,11 @@ request.interceptors.response.use(
         // 检查后端返回的 statusCode 字段（优先级最高）
         if (data.statusCode !== undefined) {
           if (data.statusCode === 200 || data.statusCode === 201) {
-            // 智能返回策略：
-            // 1. 如果有 data 字段且不为空对象，返回 data 的内容（如登录接口）
-            // 2. 如果没有 data 字段或 data 为空，返回完整响应（如验证码接口）
-            if (data.data !== undefined && data.data !== null && Object.keys(data.data).length > 0) {
+            // 返回策略:只要存在 data 字段(含空数组/空对象)就解包返回 data.data;
+            // 否则(无 data 字段,如验证码接口)返回完整响应。
+            // 注意:不能用 Object.keys(data.data).length>0 判断——空数组 [] 的 keys 长度为 0,
+            // 会被误判而返回整个信封,导致列表类接口拿到对象而非数组、.map/.length 出错。
+            if (data.data !== undefined && data.data !== null) {
               return data.data // 返回 data 字段的内容
             } else {
               return data // 返回完整数据

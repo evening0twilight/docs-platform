@@ -122,9 +122,6 @@ export const useUserStore = defineStore('user', {
             isLoggedIn: true
           })
           
-          console.log('登录成功，token:', token)
-          console.log('用户信息:', { name: displayName, email: userInfo?.email })
-          
           // ⭐ 登录成功后，初始化 WebSocket 连接
           this.initWebSocket()
           

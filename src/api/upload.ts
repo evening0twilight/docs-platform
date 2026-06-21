@@ -49,8 +49,6 @@ export const uploadImages = async (files: File[]) => {
     formData.append('files', file);
   });
 
-  console.log('[批量上传]', files.length, '张图片');
-
   const response = await http.post<{
     urls: string[];
     count: number;
@@ -60,6 +58,6 @@ export const uploadImages = async (files: File[]) => {
     },
   });
 
-  console.log('[批量上传成功]', response.data.count, '张图片');
-  return response.data;
+  // 响应拦截器已解包,response 即 { urls, count };此前读 response.data.count 会抛 TypeError
+  return response;
 };
