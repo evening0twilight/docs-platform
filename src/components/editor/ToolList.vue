@@ -392,8 +392,8 @@ const getButtonClass = (markType: string, options?: any) => {
 }
 
 .heading-trigger.is-active {
-  background-color: #1890ff;
-  border: 1px solid #1890ff;
+  background-color: #4f46e5;
+  border: 1px solid #4f46e5;
 }
 
 .heading-trigger.is-active img {
@@ -483,8 +483,8 @@ const getButtonClass = (markType: string, options?: any) => {
 
 /* 完全激活状态 */
 .toolContainer > div.is-active {
-  background-color: #1890ff;
-  border: 1px solid #1890ff;
+  background-color: #4f46e5;
+  border: 1px solid #4f46e5;
 }
 
 .toolContainer > div.is-active img {

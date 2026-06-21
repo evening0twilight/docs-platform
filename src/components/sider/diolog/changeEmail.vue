@@ -466,11 +466,11 @@ defineExpose({
     transition: all 0.3s ease;
 
     &:hover {
-      border-color: #165dff;
+      border-color: #4f46e5;
     }
 
     &:focus {
-      border-color: #165dff;
+      border-color: #4f46e5;
       box-shadow: 0 0 0 3px rgba(22, 93, 255, 0.1);
     }
   }
@@ -481,11 +481,11 @@ defineExpose({
     transition: all 0.3s ease;
 
     &:hover {
-      border-color: #165dff;
+      border-color: #4f46e5;
     }
 
     &:focus-within {
-      border-color: #165dff;
+      border-color: #4f46e5;
       box-shadow: 0 0 0 3px rgba(22, 93, 255, 0.1);
     }
   }

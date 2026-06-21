@@ -94,9 +94,9 @@ const closeTab = (tabId: string) => {
   display: flex;
   align-items: center;
   padding: 8px 12px;
-  background: #f1f3f4;
-  border: 1px solid #dee2e6;
-  border-radius: 6px 6px 0 0;
+  background: #f3f4f7;
+  border: 1px solid var(--c-border);
+  border-radius: 8px 8px 0 0;
   cursor: pointer;
   transition: all 0.2s;
   min-width: 120px;
@@ -112,7 +112,7 @@ const closeTab = (tabId: string) => {
 
 .tab.active {
   background: white;
-  border-bottom: 2px solid #1890ff;
+  border-bottom: 2px solid #4f46e5;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 

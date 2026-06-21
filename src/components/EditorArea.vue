@@ -1838,7 +1838,7 @@ onBeforeUnmount(() => {
   width: 16px;
   height: 16px;
   cursor: pointer;
-  accent-color: #1890ff;
+  accent-color: #4f46e5;
 }
 
 .editorContainer :deep(.ProseMirror li[data-type="taskItem"] > div),
