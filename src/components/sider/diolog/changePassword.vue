@@ -107,7 +107,7 @@ const passwordStrength = computed(() => {
 const strengthColor = computed(() => {
   const strength = passwordStrength.value;
   if (strength < 25) return '#f53f3f';
-  if (strength < 50) return '#ff7d00';
+  if (strength < 50) return '#d97706';
   if (strength < 75) return '#f7ba1e';
   return '#00b42a';
 });

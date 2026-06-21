@@ -502,7 +502,7 @@ const handleClearSearch = () => {
 
 .permission.perm-viewer {
   background: #fff7e8;
-  color: #ff7d00;
+  color: #d97706;
 }
 
 /* ====== 空状态 ====== */

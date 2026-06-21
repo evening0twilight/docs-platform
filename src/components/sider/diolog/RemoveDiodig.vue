@@ -340,7 +340,7 @@ defineExpose({
   padding: 8px 12px;
   background: #fff7e6;
   border-radius: 6px;
-  border-left: 3px solid #ff7d00;
+  border-left: 3px solid #d97706;
 }
 
 /* 复用 addDocs 的样式 */
