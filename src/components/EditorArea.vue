@@ -1016,6 +1016,9 @@ const fetchDocument = async () => {
 // 处理内容变化
 const handleContentChange = () => {
   if (!editor.value || !documentData.value) return
+  // 只读用户(无写权限)不标记修改/不自动保存:
+  // 协同时接收远端编辑会改变内容,但不应触发保存(否则被权限拦截弹"更新失败")
+  if (!editor.value.isEditable) return
 
   const currentContent = editor.value.getHTML()
   const originalContent = documentData.value.content || ''
