@@ -1439,7 +1439,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   border-bottom: 1px solid var(--c-border);
-  background: #fff;
+  background: var(--c-surface);
   /* height: 50px; */
   min-height: 50px;
   flex-shrink: 0;
@@ -1514,8 +1514,8 @@ onBeforeUnmount(() => {
 
 .document-info {
   padding: 8px 16px;
-  background: #f8f9fa;
-  border-bottom: 1px solid #e5e7eb;
+  background: var(--c-bg);
+  border-bottom: 1px solid var(--c-border);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1576,7 +1576,7 @@ onBeforeUnmount(() => {
   width: 320px;
   position: relative;
   transition: all 0.3s ease;
-  background: #fff;
+  background: var(--c-surface);
   border-left: 1px solid var(--color-border);
   display: flex;
   flex-direction: column;
@@ -1685,8 +1685,8 @@ onBeforeUnmount(() => {
   width: 280px;
   position: relative;
   transition: width 0.3s ease;
-  background: #fff;
-  border-left: 1px solid #e5e7eb;
+  background: var(--c-surface);
+  border-left: 1px solid var(--c-border);
   display: flex;
   flex-direction: column;
 }
@@ -1707,8 +1707,8 @@ onBeforeUnmount(() => {
   transform: translateY(-50%);
   width: 32px;
   height: 60px;
-  background: #f3f4f6;
-  border: 1px solid #e5e7eb;
+  background: var(--c-bg);
+  border: 1px solid var(--c-border);
   border-left: none;
   border-radius: 0 6px 6px 0;
   display: flex;
@@ -1727,8 +1727,8 @@ onBeforeUnmount(() => {
 }
 
 .sidebar-toggle:hover {
-  background: #e5e7eb;
-  color: #374151;
+  background: var(--c-border);
+  color: var(--c-text);
   transform: translateY(-50%) scale(1.05);
 }
 
@@ -1746,7 +1746,7 @@ onBeforeUnmount(() => {
   padding: 40px 32px 96px 32px !important;
   font-size: 16px;
   line-height: 1.8;
-  color: #2b303b;
+  color: var(--c-text);
   outline: none;
 }
 
@@ -1760,7 +1760,7 @@ onBeforeUnmount(() => {
   font-weight: 700;
   line-height: 1.3;
   margin: 0.2em 0 0.5em;
-  color: #15181f;
+  color: var(--c-text);
 }
 
 .editorContainer :deep(.ProseMirror h2) {
@@ -1768,14 +1768,14 @@ onBeforeUnmount(() => {
   font-weight: 700;
   line-height: 1.35;
   margin: 1em 0 0.4em;
-  color: #15181f;
+  color: var(--c-text);
 }
 
 .editorContainer :deep(.ProseMirror h3) {
   font-size: 19px;
   font-weight: 600;
   margin: 0.9em 0 0.3em;
-  color: #15181f;
+  color: var(--c-text);
 }
 
 .editorContainer :deep(.ProseMirror p) {
@@ -1899,7 +1899,7 @@ onBeforeUnmount(() => {
 /* 代码块样式 */
 .editorContainer :deep(.ProseMirror pre),
 .editorContainer :deep(.ProseMirror .code-block) {
-  background: #f5f5f5;
+  background: var(--c-bg);
   color: #333;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', 'source-code-pro', monospace;
   padding: 0.75rem 1rem;

@@ -40,6 +40,33 @@
   --primary-7: 67, 56, 202;
 }
 
+/* ============ 暗色主题 ============ */
+html.dark {
+  --c-primary: #6366f1;
+  --c-primary-hover: #818cf8;
+  --c-primary-soft: #242747;
+  --c-primary-ring: rgba(129, 140, 248, 0.24);
+
+  --c-bg: #14161b;
+  --c-surface: #1e2128;
+  --c-sidebar: #191b21;
+  --c-border: #2a2e38;
+  --c-border-strong: #3a3f4b;
+  --c-text: #e7e9ef;
+  --c-text-2: #a7adba;
+  --c-text-3: #71778a;
+
+  --primary-1: 36, 39, 71;
+  --primary-5: 129, 140, 248;
+  --primary-6: 99, 102, 241;
+  --primary-7: 79, 70, 229;
+}
+
+html,
+body {
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
 /* ============ 基础排版 ============ */
 html,
 body,

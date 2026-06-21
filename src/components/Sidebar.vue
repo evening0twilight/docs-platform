@@ -11,8 +11,11 @@
           </a-avatar>
         </a-space>
       </div>
-      <!-- 用户头像 -->
-      <div class="flex items-center justify-center">
+      <!-- 主题切换 + 用户头像 -->
+      <div class="flex items-center justify-center" style="gap: 10px;">
+        <button class="theme-toggle" @click="toggleTheme" :title="isDark ? '切换到亮色' : '切换到暗色'">
+          {{ isDark ? '☀️' : '🌙' }}
+        </button>
         <a-popover position="bl" trigger="hover"
           :content-style="{ padding: '0', background: 'transparent', boxShadow: 'none', border: 'none' }">
           <a-space size="large">
@@ -130,6 +133,10 @@ import AddDocs from './sider/diolog/addDocs.vue';
 import DocsArea from './sider/docsArea.vue'
 import unImgUrl from '@/assets/头像.svg';
 import { getSharedDocuments } from '@/api/docs'
+import { useTheme } from '@/composables/useTheme'
+
+// 主题切换
+const { isDark, toggle: toggleTheme } = useTheme()
 
 // 获取用户store
 const userStore = useUserStore()
@@ -322,6 +329,26 @@ const handleClearSearch = () => {
 .sidebarContainer {
   background: var(--c-sidebar);
   border-right: 1px solid var(--c-border);
+}
+
+.theme-toggle {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--c-border);
+  background: var(--c-surface);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.theme-toggle:hover {
+  border-color: var(--c-primary);
+  background: var(--c-primary-soft);
 }
 
 /* ====== 文档区域样式 ====== */

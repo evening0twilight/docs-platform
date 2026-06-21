@@ -11,6 +11,11 @@ import './style.css'
 import App from './App.vue'
 // 引入用户store
 import { useUserStore } from './store/user'
+// 主题(暗色/亮色)
+import { useTheme } from './composables/useTheme'
+
+// 在挂载前应用主题,避免首屏闪烁
+useTheme().init()
 
 const app = createApp(App)
 // pinia

@@ -13,7 +13,7 @@
   </div>
 
   <!-- 当没有标签时显示的调试信息 -->
-  <div v-else class="no-tabs-debug" style="padding: 8px; color: #666; font-size: 14px;">
+  <div v-else class="no-tabs-debug" style="padding: 8px; color: var(--c-text-3); font-size: 14px;">
     暂无标签页 (点击左侧文档来打开标签)
   </div>
 </template>
@@ -94,7 +94,7 @@ const closeTab = (tabId: string) => {
   display: flex;
   align-items: center;
   padding: 8px 12px;
-  background: #f3f4f7;
+  background: var(--c-bg);
   border: 1px solid var(--c-border);
   border-radius: 8px 8px 0 0;
   cursor: pointer;
@@ -107,11 +107,11 @@ const closeTab = (tabId: string) => {
 }
 
 .tab:hover {
-  background: #e9ecef;
+  background: var(--c-border);
 }
 
 .tab.active {
-  background: white;
+  background: var(--c-surface);
   border-bottom: 2px solid #4f46e5;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -122,7 +122,7 @@ const closeTab = (tabId: string) => {
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 14px;
-  color: #333;
+  color: var(--c-text);
 }
 
 .modified-indicator {
@@ -138,7 +138,7 @@ const closeTab = (tabId: string) => {
   border-radius: 50%;
   border: none;
   background: rgba(0, 0, 0, 0.1);
-  color: #666;
+  color: var(--c-text-3);
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -150,7 +150,7 @@ const closeTab = (tabId: string) => {
 
 .close-btn:hover {
   background: rgba(0, 0, 0, 0.2);
-  color: #333;
+  color: var(--c-text);
 }
 
 /* 滚动条样式 */
