@@ -1,4 +1,4 @@
-import { ref, onBeforeUnmount } from 'vue'
+import { ref, shallowRef, markRaw, onBeforeUnmount } from 'vue'
 import type { Ref } from 'vue'
 import * as Y from 'yjs'
 import { HocuspocusProvider } from '@hocuspocus/provider'
@@ -29,8 +29,11 @@ export function useYjsCollaboration(
   destroyYjs: () => void
   updateCursor: (position: { from: number; to: number }) => void
 } {
-  const ydoc = ref<Y.Doc | null>(null)
-  const provider = ref<HocuspocusProvider | null>(null)
+  // 关键:Yjs 的 Y.Doc / HocuspocusProvider 绝不能被 Vue 的响应式系统深度代理。
+  // Yjs 内部大量依赖对象身份比较(value === type)与 instanceof,响应式 Proxy 会破坏它们,
+  // 导致 findRootTypeKey 报 "Unexpected case"。因此用 shallowRef + markRaw 保持原始对象。
+  const ydoc = shallowRef<Y.Doc | null>(null)
+  const provider = shallowRef<HocuspocusProvider | null>(null)
   const isConnected = ref(false)
   const onlineUsers = ref<Array<{ id: number; username: string; color: string }>>([])
 
@@ -47,9 +50,9 @@ export function useYjsCollaboration(
 
     console.log('[Yjs] 初始化协同编辑:', documentId.value)
 
-    ydoc.value = new Y.Doc()
+    ydoc.value = markRaw(new Y.Doc())
 
-    provider.value = new HocuspocusProvider({
+    provider.value = markRaw(new HocuspocusProvider({
       url: yjsConfig.wsUrl,
       name: `document-${documentId.value}`,
       document: ydoc.value,
@@ -64,7 +67,7 @@ export function useYjsCollaboration(
         console.error('[Yjs] 鉴权失败:', reason)
         isConnected.value = false
       },
-    })
+    }))
 
     // 设置本地用户(供协同光标显示)
     const awareness = provider.value.awareness

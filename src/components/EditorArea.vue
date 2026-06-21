@@ -463,36 +463,8 @@ watch(documentId, (newId, oldId) => {
   console.log('[EditorArea] documentId 变化:', { oldId, newId })
 
   if (useYjs) {
-    // Yjs模式: 初始化或切换文档
-    if (oldId && yjsCollaboration) {
-      console.log('[Yjs] 离开旧文档:', oldId)
-      yjsCollaboration.destroyYjs()
-    }
-
-    if (newId && editor.value) {
-      console.log('[Yjs] 加入新文档:', newId)
-      const userInfo = {
-        id: Number(userStore.userInfo?.id) || 0,
-        username: userStore.userInfo?.name || '未知用户',
-        color: generateUserColor(Number(userStore.userInfo?.id) || 0),
-      }
-
-      yjsCollaboration = useYjsCollaboration(documentId, userInfo)
-      yjsCollaboration.initYjs(editor.value)
-
-      // 动态添加Yjs扩展
-      if (yjsCollaboration.ydoc.value && yjsCollaboration.provider.value) {
-        const yjsExts = getYjsExtensions(
-          yjsCollaboration.ydoc.value,
-          yjsCollaboration.provider.value,
-          userInfo
-        )
-        yjsExts.forEach(ext => editor.value?.registerPlugin(ext as any))
-      }
-
-      isConnected = yjsCollaboration.isConnected
-      onlineUsers = yjsCollaboration.onlineUsers
-    }
+    // Yjs 模式已在 setup 创建编辑器时接入 Collaboration 扩展;
+    // 组件按文档 :key 重建,无需在此处理切换。
   } else {
     // Socket.IO模式: 使用原有逻辑
     // 如果有旧文档，先离开
@@ -634,6 +606,28 @@ const broadcastEdit = (transaction: any) => {
   })
 }
 
+// Yjs 协同:启用时在创建编辑器前准备 ydoc + provider + 扩展
+// (Collaboration 扩展必须在创建编辑器时注入,且需关闭 StarterKit 的 history)
+let yjsExtensionsList: any[] = []
+if (useYjs) {
+  const yUserInfo = {
+    id: Number(userStore.userInfo?.id) || 0,
+    username: userStore.userInfo?.name || '用户',
+    color: generateUserColor(Number(userStore.userInfo?.id) || 0),
+  }
+  yjsCollaboration = useYjsCollaboration(documentId, yUserInfo)
+  yjsCollaboration.initYjs()
+  if (yjsCollaboration.ydoc.value && yjsCollaboration.provider.value) {
+    yjsExtensionsList = getYjsExtensions(
+      yjsCollaboration.ydoc.value,
+      yjsCollaboration.provider.value,
+      yUserInfo,
+    )
+  }
+  isConnected = yjsCollaboration.isConnected
+  onlineUsers = yjsCollaboration.onlineUsers
+}
+
 // 创建编辑器实例
 const editor = useEditor({
   content: '',
@@ -668,6 +662,8 @@ const editor = useEditor({
       heading: {
         levels: [1, 2, 3, 4, 5, 6],
       },
+      // Yjs 模式下关闭内置 history(改用基于 Yjs 的撤销/重做协调)
+      history: useYjs ? false : undefined,
     }),
     Underline, // StarterKit不包含Underline,需要单独添加
     Highlight.configure({
@@ -696,8 +692,8 @@ const editor = useEditor({
         class: 'editor-image',
       },
     }),
-    // 使用Yjs协同光标或传统协同光标
-    ...(useYjs ? [] : [CollaborationCursor]),
+    // Yjs 模式注入 Collaboration + CollaborationCursor;否则用自定义 Socket.IO 光标
+    ...(useYjs ? yjsExtensionsList : [CollaborationCursor]),
     CommentMark, // 添加评论标记扩展
   ],
   editable: true,
@@ -926,7 +922,23 @@ const fetchDocument = async () => {
     //   设置编辑器内容时禁用广播（防止加载时触发协同更新）
     isApplyingRemoteEdit.value = true
     console.log('[fetchDocument] 🔒 设置isApplyingRemoteEdit=true，准备加载内容')
-    editor.value.commands.setContent(editorContent)
+
+    if (useYjs && yjsCollaboration?.provider.value) {
+      // Yjs 模式:等 provider 与后端同步完成后,仅当协同文档仍为空时,
+      // 用 HTTP 接口返回的历史内容做一次初始种子(把旧的非协同文档迁移进 Yjs)。
+      // 守卫 editor.isEmpty 可避免:① 覆盖他人已有的协同内容;② 双客户端重复播种。
+      const prov = yjsCollaboration.provider.value as any
+      const seed = () => {
+        if (editor.value && editor.value.isEmpty && editorContent) {
+          editor.value.commands.setContent(editorContent)
+          console.log('[fetchDocument] 🌱 协同文档为空,已用历史内容初始化种子')
+        }
+      }
+      if (prov.isSynced || prov.synced) seed()
+      else prov.on?.('synced', seed)
+    } else {
+      editor.value.commands.setContent(editorContent)
+    }
     console.log('[fetchDocument] ✅ 内容已加载，文档大小:', editor.value.state.doc.content.size)
     console.log('[fetchDocument] 📄 编辑器HTML长度:', editor.value.getHTML().length)
 

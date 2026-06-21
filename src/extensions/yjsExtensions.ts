@@ -1,5 +1,7 @@
 import Collaboration from '@tiptap/extension-collaboration'
-import CollaborationCursor from '@tiptap/extension-collaboration-cursor'
+// Tiptap v3.3+ 中协同光标扩展更名为 CollaborationCaret,且与 Collaboration 一样
+// 基于 @tiptap/y-tiptap 的 ySyncPluginKey(旧的 -cursor 用 y-prosemirror 的 key,二者不兼容)。
+import CollaborationCaret from '@tiptap/extension-collaboration-caret'
 import * as Y from 'yjs'
 import type { HocuspocusProvider } from '@hocuspocus/provider'
 
@@ -19,23 +21,29 @@ export function getYjsExtensions(
   provider: HocuspocusProvider,
   userInfo: UserInfo
 ) {
-  return [
+  const extensions: any[] = [
     // Yjs协同编辑核心扩展
     Collaboration.configure({
       document: ydoc,
       // 使用默认的fragment名称
       field: 'default',
     }),
-
-    // Yjs协同光标扩展
-    CollaborationCursor.configure({
-      provider: provider,
-      user: {
-        name: userInfo.username,
-        color: userInfo.color,
-      },
-    }),
   ]
+
+  // Yjs协同光标扩展(CollaborationCaret 通过 provider.awareness 同步远端光标/选区)
+  if (provider.awareness) {
+    extensions.push(
+      CollaborationCaret.configure({
+        provider: provider,
+        user: {
+          name: userInfo.username,
+          color: userInfo.color,
+        },
+      }),
+    )
+  }
+
+  return extensions
 }
 
 /**
