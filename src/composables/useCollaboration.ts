@@ -2,7 +2,7 @@
  * 文档协作编辑 Composable
  * 封装 WebSocket 相关逻辑，便于在编辑器组件中使用
  */
-import { onMounted, onUnmounted, watch } from 'vue'
+import { onMounted, onUnmounted } from 'vue'
 import { socketService, type DocumentEdit } from '@/services/socket'
 import { Message } from '@arco-design/web-vue'
 
@@ -32,54 +32,9 @@ export function useCollaboration(options: UseCollaborationOptions) {
    * 加入文档房间
    */
   const joinDocument = () => {
-    if (!socketService.isConnected.value) {
-      if (import.meta.env.DEV) console.warn('[useCollaboration] ⚠️ WebSocket 未连接，等待连接后加入文档')
-      // 等待连接后再加入(watcher 一并登记,卸载时统一停止,避免泄漏)
-      const unwatch = watch(
-        () => socketService.isConnected.value,
-        (connected) => {
-          if (connected) {
-            // 连接成功后，等待认证
-            if (socketService.isAuthenticated.value) {
-              socketService.joinDocument(documentId)
-            } else {
-              // 如果还未认证，等待认证完成
-              const unwatchAuth = watch(
-                () => socketService.isAuthenticated.value,
-                (authenticated) => {
-                  if (authenticated) {
-                    socketService.joinDocument(documentId)
-                    unwatchAuth()
-                  }
-                }
-              )
-              unsubscribers.push(unwatchAuth)
-            }
-            unwatch()
-          }
-        }
-      )
-      unsubscribers.push(unwatch)
-      return
-    }
-
-    // 如果已连接但未认证，等待认证
-    if (!socketService.isAuthenticated.value) {
-      if (import.meta.env.DEV) console.warn('[useCollaboration] ⚠️ 未认证，等待认证后加入文档')
-      const unwatchAuth = watch(
-        () => socketService.isAuthenticated.value,
-        (authenticated) => {
-          if (authenticated) {
-            socketService.joinDocument(documentId)
-            unwatchAuth()
-          }
-        }
-      )
-      unsubscribers.push(unwatchAuth)
-      return
-    }
-
-    // 已连接且已认证，直接加入
+    // 直接委托给 socketService:它已稳健处理"未连接/未认证"的情况——
+    // 会记住活跃文档(activeDocumentId),并在连接+认证完成后自动加入房间,
+    // 覆盖刷新/直接打开文档链接等整页加载场景。
     socketService.joinDocument(documentId)
   }
 

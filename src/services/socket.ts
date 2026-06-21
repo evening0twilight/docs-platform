@@ -57,6 +57,8 @@ export interface TypingStatus {
 class SocketService {
   public socket: Socket | null = null  // ⭐ 改为 public 以便外部访问
   private currentDocumentId: string | null = null
+  // 跨重连保留的"当前活跃文档",断线不清空,重连/重认证后据此自动重新加入房间
+  private activeDocumentId: string | null = null
 
   // 响应式状态
   public isConnected = ref(false)
@@ -108,6 +110,7 @@ class SocketService {
       this.onlineUsers.value = []
       this.currentUser.value = null
       this.currentDocumentId = null
+      this.activeDocumentId = null
     }
   }
 
@@ -165,10 +168,11 @@ class SocketService {
         color: data.color,
       }
       
-      // ⭐ 认证成功后，如果有待加入的文档，立即加入
-      if (this.currentDocumentId) {
-        console.log('[Socket] 📄 认证成功，自动加入文档:', this.currentDocumentId)
-        this.joinDocument(this.currentDocumentId)
+      // ⭐ 认证成功后,自动(重新)加入当前活跃文档(覆盖重连场景)
+      const docToJoin = this.currentDocumentId || this.activeDocumentId
+      if (docToJoin) {
+        console.log('[Socket] 📄 认证成功，自动加入文档:', docToJoin)
+        this.joinDocument(docToJoin)
       }
     })
 
@@ -318,9 +322,10 @@ class SocketService {
         }
       }
 
-      // 重新加入文档房间
-      if (this.currentDocumentId) {
-        this.joinDocument(this.currentDocumentId)
+      // 重新加入文档房间(断线时 currentDocumentId 被清空,改用 activeDocumentId)
+      const docToJoin = this.currentDocumentId || this.activeDocumentId
+      if (docToJoin) {
+        this.joinDocument(docToJoin)
       }
     })
 
@@ -385,6 +390,9 @@ class SocketService {
    * 加入文档房间
    */
   joinDocument(documentId: string) {
+    // 记住活跃文档(跨重连保留),即使此刻未连接/未认证
+    this.activeDocumentId = documentId
+
     if (!this.socket?.connected) {
       console.warn('[Socket] ⚠️ 未连接，无法加入文档')
       return
@@ -414,6 +422,9 @@ class SocketService {
     if (this.currentDocumentId === documentId) {
       this.currentDocumentId = null
       this.onlineUsers.value = []
+    }
+    if (this.activeDocumentId === documentId) {
+      this.activeDocumentId = null
     }
   }
 
