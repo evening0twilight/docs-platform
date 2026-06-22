@@ -185,27 +185,13 @@ const handleNodeSelect = async (selectedKeys: string[], info: any) => {
     const nodeKey = selectedKeys[0];
     const selectedNode = info.node;
 
-    // 通过API获取完整的文档信息
-    try {
-      const { getDocument } = await import('@/api/docs');
-      const document = await getDocument(nodeKey);
-
-      console.log('选中文档:', document);
-
-      // 发射文档点击事件
-      emit('document-click', document);
-    } catch (error) {
-      console.error('获取文档信息失败:', error);
-
-      // 如果API调用失败，使用Tree节点的基本信息
-      const fallbackDoc = {
-        id: nodeKey,
-        name: selectedNode.title,
-        itemType: selectedNode.type === 'folder' ? 'folder' : 'document'
-      };
-
-      emit('document-click', fallbackDoc);
-    }
+    // 只发射树节点已有的基本信息(id/name/itemType)——下游(打开标签/路由)仅需这些;
+    // 文档全文由 EditorArea 打开时单独获取,这里无需再 getDocument 拉一份全文(避免双重请求)。
+    emit('document-click', {
+      id: nodeKey,
+      name: selectedNode.title,
+      itemType: selectedNode.type === 'folder' ? 'folder' : 'document',
+    });
   }
 };
 
