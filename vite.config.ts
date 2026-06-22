@@ -39,14 +39,41 @@ export default defineConfig({
         : [],
   },
   build: {
+    // 把超大块阈值调到与拆分后实际相符,避免无意义告警
+    chunkSizeWarningLimit: 700,
     // 生成带哈希的文件名，防止缓存问题
     rollupOptions: {
       output: {
         // 为 JS 文件添加哈希
         entryFileNames: 'assets/[name].[hash].js',
         chunkFileNames: 'assets/[name].[hash].js',
-        assetFileNames: 'assets/[name].[hash].[ext]'
-      }
-    }
-  }
+        assetFileNames: 'assets/[name].[hash].[ext]',
+        // 按库拆分 vendor 到独立可缓存 chunk:应用代码变更时这些第三方块仍命中浏览器缓存,
+        // 并可并行下载。Tiptap/Yjs 体积大且仅编辑器(懒加载路由)用到,单独成块随路由按需加载。
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return
+          if (id.includes('@arco-design')) return 'vendor-arco'
+          if (
+            id.includes('@tiptap') ||
+            id.includes('prosemirror') ||
+            id.includes('/yjs/') ||
+            id.includes('y-prosemirror') ||
+            id.includes('y-protocols') ||
+            id.includes('@hocuspocus') ||
+            id.includes('lib0')
+          ) {
+            return 'vendor-editor'
+          }
+          if (
+            id.includes('/vue/') ||
+            id.includes('vue-router') ||
+            id.includes('/pinia') ||
+            id.includes('@vue/')
+          ) {
+            return 'vendor-vue'
+          }
+        },
+      },
+    },
+  },
 })
