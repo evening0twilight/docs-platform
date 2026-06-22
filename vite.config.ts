@@ -1,11 +1,23 @@
 import { defineConfig } from 'vite'
 import tailwindcss from '@tailwindcss/vite'
 import vue from '@vitejs/plugin-vue'
+import Components from 'unplugin-vue-components/vite'
+import { ArcoResolver } from 'unplugin-vue-components/resolvers'
 import path from 'path'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [vue(), tailwindcss()],
+  plugins: [
+    vue(),
+    tailwindcss(),
+    // 按需自动导入模板中用到的 Arco 组件(只引入组件 JS,样式仍走 main.ts 的全量 arco.css,
+    // 从而保证暗色主题与全部样式不变)。配合移除 main.ts 的 app.use(ArcoVue),
+    // 让全量注册的 ~80 个组件被 tree-shake 成实际用到的那些,大幅缩减 JS 体积。
+    Components({
+      dts: false,
+      resolvers: [ArcoResolver({ importStyle: false })],
+    }),
+  ],
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src')

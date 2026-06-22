@@ -4,8 +4,8 @@ import { createPinia } from 'pinia'
 import { createPersistedState } from 'pinia-plugin-persistedstate'
 // 引入路由
 import router from './router'
-// 引入arco
-import ArcoVue from '@arco-design/web-vue'
+// Arco 组件改为按需自动导入(见 vite.config 的 unplugin-vue-components + ArcoResolver),
+// 此处只保留全量样式以确保暗色主题与所有组件样式完整。
 import '@arco-design/web-vue/dist/arco.css'
 import './style.css'
 import App from './App.vue'
@@ -25,7 +25,7 @@ pinia.use(createPersistedState())
 // 使用插件
 app.use(pinia)
 app.use(router)
-app.use(ArcoVue)
+// 注:不再 app.use(ArcoVue) 全量注册——组件按需自动导入,大幅缩减打包体积
 
 // 初始化用户状态
 const userStore = useUserStore()
