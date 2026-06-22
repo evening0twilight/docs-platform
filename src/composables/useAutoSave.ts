@@ -22,8 +22,12 @@ export type SaveStatusType = typeof SaveStatus[keyof typeof SaveStatus];
  */
 export function useAutoSave(
   documentId: Ref<string | number | undefined>,
-  content: ComputedRef<any>,
+  // 内容获取器:仅在真正落盘那一刻调用一次(取代每按键都重算的 deep-watch 计算属性),
+  // 避免每次 ProseMirror 事务都跑全文 getJSON 序列化 + 深度遍历整棵 JSON 树。
+  getContent: () => any,
   isModified: ComputedRef<boolean>,
+  // 轻量变更信号:每次编辑自增,只用于触发防抖保存(浅监听,无 deep)。
+  changeSignal: Ref<number>,
 ) {
   const saveStatus = ref<SaveStatusType>(SaveStatus.IDLE);
   const lastSavedAt = ref<Date | null>(null);
@@ -33,13 +37,15 @@ export function useAutoSave(
    * 保存文档内容 (仅保存,不创建版本)
    */
   async function saveContent() {
-    if (!documentId.value || isSaving.value || !content.value) return;
+    if (!documentId.value || isSaving.value) return;
+    const data = getContent(); // 落盘时才取一次全文
+    if (!data) return;
 
     try {
       isSaving.value = true;
       saveStatus.value = SaveStatus.SAVING;
 
-      const contentString = JSON.stringify(content.value);
+      const contentString = JSON.stringify(data);
       await saveDocumentContent(String(documentId.value), contentString);
 
       saveStatus.value = SaveStatus.SAVED;
@@ -63,13 +69,15 @@ export function useAutoSave(
    * 手动保存并创建版本
    */
   async function saveVersion(changeDescription: string = '手动保存') {
-    if (!documentId.value || isSaving.value || !content.value) return;
+    if (!documentId.value || isSaving.value) return;
+    const data = getContent();
+    if (!data) return;
 
     try {
       isSaving.value = true;
       saveStatus.value = SaveStatus.SAVING;
 
-      const contentString = JSON.stringify(content.value);
+      const contentString = JSON.stringify(data);
 
       // 1. 保存文档内容
       await saveDocumentContent(String(documentId.value), contentString);
@@ -113,17 +121,13 @@ export function useAutoSave(
   };
 
   /**
-   * 监听内容变化
+   * 监听轻量变更信号(每次编辑自增)触发防抖保存——浅监听,不做 deep 遍历。
    */
-  const stopWatch = watch(
-    () => content.value,
-    (newContent) => {
-      if (isModified.value && newContent) {
-        debouncedSave();
-      }
-    },
-    { deep: true }
-  );
+  const stopWatch = watch(changeSignal, () => {
+    if (isModified.value) {
+      debouncedSave();
+    }
+  });
 
   /**
    * 手动保存版本

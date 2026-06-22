@@ -179,6 +179,9 @@ const loading = ref(false)
 const uploadLoading = ref(false) // 图片上传 loading
 const documentData = ref<any>(null)
 const isModified = ref(false)
+// 编辑变更序号:每次编辑器更新自增,作为 useAutoSave 的轻量触发信号
+// (避免把 editor.getJSON() 包成 deep-watch 计算属性而每按键全文序列化)
+const editorChangeSeq = ref(0)
 const isRemoteUpdate = ref(false) // 标记是否为远程更新,避免循环发送
 const sidebarCollapsed = ref(false) // 侧边栏折叠状态
 const shareDialogRef = ref<InstanceType<typeof ShareDialog>>() // 分享对话框ref
@@ -721,6 +724,8 @@ const editor = useEditor({
   onUpdate: ({ editor, transaction }) => {
     // 内容变化时的处理
     handleContentChange()
+    // 自增变更信号,驱动 useAutoSave 的防抖保存(不在此处做全文序列化)
+    editorChangeSeq.value++
 
     // 如果不是远程更新，则广播编辑操作
     if (!isApplyingRemoteEdit.value && collaboration && documentId.value) {
@@ -748,8 +753,9 @@ const {
   manualSave: handleManualSave,
 } = useAutoSave(
   documentId,
-  computed(() => editor.value?.getJSON()),
+  () => editor.value?.getJSON(), // 仅在落盘时取一次全文
   computed(() => isModified.value),
+  editorChangeSeq,
 )
 
 // 自动/手动保存成功后复位"已修改"标记(useAutoSave 内部只读 isModified,由此处统一复位)
